@@ -3,7 +3,7 @@
     <head>
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
         <title>Formula 1 VA Project</title>
-        <script type="text/javascript" src="d3.js"></script>
+        <script type="text/javascript" src="d3.js" charset="utf-8"></script>
         <style>
             #title {
                 border: 3px solid black;
@@ -30,7 +30,7 @@
 	</head>
     
     <body>
-    <script>
+    <script charset="utf-8">
     function init() {
         title = document.createElement('div');
         title.id = "title";
@@ -213,7 +213,9 @@
             .data(relevantData)
             .enter()
             .append("circle")
-            .attr("class","dot")
+            .attr("class", function(d) {
+                return "dot"+d.surname; 
+            })
             .attr("r", 1)
             .attr("cx", function(d) { 
                 return x(d.lap);
@@ -233,6 +235,7 @@
         for (i = 0; i < drivers.length; i++) {
             color = colors(drivers[i]);
             svg.append('path')
+                .attr("class", "path"+drivers[i])
                 .attr('d', line(lineData.get(drivers[i])))
                 .attr("fill", "none")
                 .attr("stroke-width", 1)
@@ -260,24 +263,52 @@
             .append("g")
             .attr("class", "legend")
 			.attr("transform", function(d,i){
-                return "translate(0,"+(i*sizeSquare+i*8)+")";
+                return "translate(0,"+(i*sizeSquare+i*6)+")";
             });
         legend.append("rect")
 			.attr("width",sizeSquare)
 			.attr("height",sizeSquare)
+            .attr("class", function(d) {
+                return "rect"+d;
+            })
 			.style("fill", function(d){
                 return colors(d);
 			});
             
         // Writes text on the legend
         legend.append("text")
-            .attr("class", "legendText")
+            .attr("class", function(d) {
+                return "text"+d;
+            })
             .attr("x", sizeSquare+5)
             .attr("y", sizeSquare/2)
             .attr("dy", ".35em")
             .text(function(d) {
-                console.log(d);
                 return d;
+            })
+            .on("click", function(d) { // User disables/enables data of a pilot in the graph
+                // DISABLE
+                if (d3.select(".path"+d).attr("visibility") == "visible") {
+                    d3.selectAll(".dot"+d)
+                        .attr("visibility", "hidden");
+                    d3.select(".path"+d)
+                        .attr("visibility", "hidden");
+                    d3.select(".text"+d)
+                        .style("fill", "grey");
+                    d3.select(".rect"+d)
+                        .style("fill", "grey");
+                }
+                // ENABLE
+                else {
+                    d3.selectAll(".dot"+d)
+                        .attr("visibility", "visible");
+                    d3.select(".path"+d)
+                        .attr("visibility", "visible");
+                    d3.select(".text"+d)
+                        .style("fill", "black");
+                    d3.select(".rect"+d)
+                        .style("fill", colors(d));
+                }   
             });
         
     }
