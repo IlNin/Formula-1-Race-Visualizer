@@ -14,8 +14,18 @@
                 background: yellow;
                 text-align: center;
             }
-           #timeseries {
-           }
+            #wrapper {
+                display: flex;
+                border: 3px solid black;
+                border-top: 1px solid black;
+                width: fit-content;
+            }  
+            #timeseries {
+                display: inline-block;
+            }
+            #legendtable {
+                display: inline-block;
+            }
         </style>
 	</head>
     
@@ -108,14 +118,14 @@
     
     function plotGraphs(data, year, round) {
         // Removes the previous graph
-        previousGraph = document.getElementById("timeseries");
+        previousGraph = document.getElementById("wrapper");
         if (document.body.contains(previousGraph)) {
             previousGraph.remove();
         }
     
         // Initializes the dimensions
-        container_dimensions = {width: 650, height: 400};
-        margins = {top: 10, right: 20, bottom: 40, left: 30};
+        container_dimensions = {width: 1050, height: 400}; // width: 650
+        margins = {top: 10, right: 20, bottom: 40, left: 40};
         chart_dimensions = {
             width: container_dimensions.width - margins.left - margins.right,
             height: container_dimensions.height - margins.top - margins.bottom
@@ -124,19 +134,27 @@
         // Gets the relevant data
         relevantData = [];
         drivers = [];
+        lineData = new Map();
         data.forEach(function(d) {
-            if (d.year == year && d.round == round && (d.surname == "Vettel" || d.surname == "Hamilton")) {
+            if (d.year == year && d.round == round) {
                 relevantData.push(d);
                 if (!drivers.includes(d.surname)) {
+                    driverData = [];
                     drivers.push(d.surname);
+                    lineData.set(d.surname, driverData);
                 }
+                lineData.get(d.surname).push(d);
             }
         });
         
-        // Initializes the empty svg area
+        // Initializes the wrapper and the empty svg area
+        wrapper = document.createElement('div');
+        wrapper.id = "wrapper";
+        document.body.append(wrapper);
+        
         svgDiv = document.createElement('div');
         svgDiv.id = "timeseries";
-        document.body.append(svgDiv);
+        wrapper.append(svgDiv);
         
         svg = d3.select('#timeseries')
             .append('svg')
@@ -147,7 +165,7 @@
                 .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
                 .attr("id","timeseries");
         
-        // Initializes the scales
+        // Initializes the scales and colors
         x = d3.scaleLinear()
             .domain(d3.extent(relevantData, function(d) {
                     return +d.lap;
@@ -159,10 +177,12 @@
                     return +d.position;
                     }))
             .range([0, chart_dimensions.height]);
+        
+        colors = d3.scaleOrdinal(d3.schemeCategory20);
             
         // Initializes the axis
         xAxis= d3.axisBottom(x).ticks().tickFormat(d3.format("d"));
-        yAxis= d3.axisLeft(y).ticks().tickFormat(d3.format("d"));
+        yAxis= d3.axisLeft(y).ticks(20).tickFormat(d3.format("d"));
         
         // Appends the x axis
         svg.append("g")
@@ -188,10 +208,7 @@
             .style("text-anchor","end")
             .text("Position");
         
-        // Populates the chart
-        for (i = 0; i < drivers.length; i++) {
-            console.log(drivers[i]); }
-            
+        // Populates the chart        
         svg.selectAll("circle")
             .data(relevantData)
             .enter()
@@ -203,6 +220,9 @@
             })
             .attr("cy", function(d) { 
                 return y(d.position);
+            })
+            .style("fill", function(d) {
+                return colors(d.surname); 
             });
             
         // Draws the line that connects the points
@@ -210,13 +230,56 @@
             .x(function(d){return x(d.lap)})
             .y(function(d){return y(d.position)})
             .curve(d3.curveLinear);
-        svg.append('path')
-            .attr('d', line(relevantData))
-            .attr("fill", "none")
-            .attr("stroke", "black")
-            //.attr("stroke-linejoin", "round")
-            //.attr("stroke-linecap", "round")
-            .attr("stroke-width", 1);
+        for (i = 0; i < drivers.length; i++) {
+            color = colors(drivers[i]);
+            svg.append('path')
+                .attr('d', line(lineData.get(drivers[i])))
+                .attr("fill", "none")
+                .attr("stroke-width", 1)
+                .attr("stroke", color);
+        }
+        
+        // Draws the legend
+        svgLegendDiv = document.createElement('div');
+        svgLegendDiv.id = "legendtable";
+        wrapper.append(svgLegendDiv);
+        
+        svgLegend = d3.select('#legendtable')
+            .append('svg')
+            .attr("width", 110)
+            .attr("height", container_dimensions.height)
+            //.style("background-color", "red")
+            .append("g")
+            .attr("transform", "translate(" + 0 + "," + margins.top + ")")
+            .attr("id","legendtable");
+          
+        sizeSquare = 10;
+        legend = svgLegend.selectAll("legend")
+            .data(drivers)
+            .enter()
+            .append("g")
+            .attr("class", "legend")
+			.attr("transform", function(d,i){
+                return "translate(0,"+(i*sizeSquare+i*8)+")";
+            });
+        legend.append("rect")
+			.attr("width",sizeSquare)
+			.attr("height",sizeSquare)
+			.style("fill", function(d){
+                return colors(d);
+			});
+            
+        // Writes text on the legend
+        legend.append("text")
+            .attr("class", "legendText")
+            .attr("x", sizeSquare+5)
+            .attr("y", sizeSquare/2)
+            .attr("dy", ".35em")
+            .text(function(d) {
+                console.log(d);
+                return d;
+            });
+        
     }
     
     init();
