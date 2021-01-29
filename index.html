@@ -14,6 +14,8 @@
                 background: yellow;
                 text-align: center;
             }
+           #timeseries {
+           }
         </style>
 	</head>
     
@@ -51,7 +53,7 @@
         search.disabled = true;
         title.appendChild(search);
         
-        d3.csv("laps.csv", function(data) {
+        d3.csv("lapsLight.csv", function(data) {
             seasons = [];
             data.forEach(function(d) {
                 //console.log(d);
@@ -63,7 +65,8 @@
                     document.getElementById("select-season").appendChild(newSeasonOption);
                 }
                 document.getElementById("select-season").onchange = function() {loadRaces(data)};    
-                document.getElementById("select-race").onchange = function() {ready(data)};
+                document.getElementById("select-race").onchange = function() {ready()};
+                search.onclick = function() {plotGraphs(data, document.getElementById("select-season").value, document.getElementById("select-race").value)}
             });
         });
     }
@@ -93,14 +96,127 @@
             
         }
     }
-    
-    function ready(data) {
-        if (document.getElementById("select-race").value > 0) {
+
+    function ready() {
+        if (document.getElementById("select-race").value > 0) {  // A valid race is selected: enables search button
             document.getElementById("search").disabled = false;
         }
-        else {
+        else { // Default option selected: disables search button
             document.getElementById("search").disabled = true;
         }
+    }
+    
+    function plotGraphs(data, year, round) {
+        // Removes the previous graph
+        previousGraph = document.getElementById("timeseries");
+        if (document.body.contains(previousGraph)) {
+            previousGraph.remove();
+        }
+    
+        // Initializes the dimensions
+        container_dimensions = {width: 650, height: 400};
+        margins = {top: 10, right: 20, bottom: 40, left: 30};
+        chart_dimensions = {
+            width: container_dimensions.width - margins.left - margins.right,
+            height: container_dimensions.height - margins.top - margins.bottom
+        };
+        
+        // Gets the relevant data
+        relevantData = [];
+        drivers = [];
+        data.forEach(function(d) {
+            if (d.year == year && d.round == round && (d.surname == "Vettel" || d.surname == "Hamilton")) {
+                relevantData.push(d);
+                if (!drivers.includes(d.surname)) {
+                    drivers.push(d.surname);
+                }
+            }
+        });
+        
+        // Initializes the empty svg area
+        svgDiv = document.createElement('div');
+        svgDiv.id = "timeseries";
+        document.body.append(svgDiv);
+        
+        svg = d3.select('#timeseries')
+            .append('svg')
+                .attr("width", container_dimensions.width)
+                .attr("height", container_dimensions.height)
+                //.style("background-color", "red")
+            .append("g")
+                .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
+                .attr("id","timeseries");
+        
+        // Initializes the scales
+        x = d3.scaleLinear()
+            .domain(d3.extent(relevantData, function(d) {
+                    return +d.lap;
+                    }))
+            .range([0, chart_dimensions.width])
+            
+        y = d3.scaleLinear()
+            .domain(d3.extent(relevantData, function(d) {
+                    return +d.position;
+                    }))
+            .range([0, chart_dimensions.height]);
+            
+        // Initializes the axis
+        xAxis= d3.axisBottom(x).ticks().tickFormat(d3.format("d"));
+        yAxis= d3.axisLeft(y).ticks().tickFormat(d3.format("d"));
+        
+        // Appends the x axis
+        svg.append("g")
+            .attr("class","x axis")
+            .attr("transform", "translate(0,"+(chart_dimensions.height+1)+")")
+            .call(xAxis);
+        svg.append("text")
+            .attr("class","label")
+            .attr("x", chart_dimensions.width)
+            .attr("y", chart_dimensions.height+(margins.bottom-10))
+            .style("text-anchor","end")
+            .text("Laps");
+        
+        // Appends the y axis
+        svg.append("g")
+            .attr("class","y axis")
+            .call(yAxis)
+        svg.append("text")
+            .attr("class","label")
+            .attr("transform","rotate(-90)")
+            .attr("y", 6)
+            .attr("dy","-1.5em")
+            .style("text-anchor","end")
+            .text("Position");
+        
+        // Populates the chart
+        for (i = 0; i < drivers.length; i++) {
+            console.log(drivers[i]); }
+            
+        svg.selectAll("circle")
+            .data(relevantData)
+            .enter()
+            .append("circle")
+            .attr("class","dot")
+            .attr("r", 1)
+            .attr("cx", function(d) { 
+                return x(d.lap);
+            })
+            .attr("cy", function(d) { 
+                return y(d.position);
+            });
+            
+        // Draws the line that connects the points
+        line = d3.line()
+            .x(function(d){return x(d.lap)})
+            .y(function(d){return y(d.position)})
+            .curve(d3.curveLinear);
+        svg.append('path')
+            .attr('d', line(relevantData))
+            .attr("fill", "none")
+            .attr("stroke", "black")
+            //.attr("stroke-linejoin", "round")
+            //.attr("stroke-linecap", "round")
+            .attr("stroke-width", 1);
     }
     
     init();
