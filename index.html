@@ -18,6 +18,7 @@
                 display: flex;
                 border: 3px solid black;
                 border-top: 1px solid black;
+                border-bottom: none;
                 width: fit-content;
             }  
             #timeseries {
@@ -26,18 +27,30 @@
             #legendtable {
                 display: inline-block;
             }
+            #brushing {
+                display: flex;
+                border: 3px solid black;
+                border-top: none;
+                width: fit-content;
+            }
         </style>
 	</head>
     
     <body>
     <script charset="utf-8"> 
     // Global variables
-    var container_dimensions = {width: 1050, height: 400}; // width: 650
+    var container_dimensions = {width: 1200, height: 400}; // width: 650
     var margins = {top: 10, right: 20, bottom: 40, left: 40};
     var chart_dimensions = {
             width: container_dimensions.width - margins.left - margins.right,
             height: container_dimensions.height - margins.top - margins.bottom
     };
+    var legend_width = 130;
+    var brushing_container_height = 100;
+    var brushing_height = brushing_container_height - margins.top - margins.bottom;
+    
+    var x, y, xAxis, yAxis, svg, line;
+    var drivers, colors, lineData;
     
     // Draw the title above the charts
     function drawTitle() {
@@ -92,7 +105,7 @@
                 seasons = []; // Contains all distinct seasons inside the csv file
                 data.forEach(function(d) { // Cycles through the data
                     // console.log(d);
-                    d.surname = d.surname.replace(/\s/g, '_'); // Removes eventual spaces in the surnames
+                    d.surname = d.surname.replace(/[\s.']/g, '_'); // Removes eventual spaces in the surnames
                     if (d.surname == "Schumacher") { // Separetes Ralph and Michael Schumacher
                         d.surname = d.surname + "_" + d.forename[0];
                     }
@@ -166,6 +179,7 @@
         previousGraph = document.getElementById("wrapper");
         if (document.body.contains(previousGraph)) {
             previousGraph.remove();
+            document.getElementById("brushing").remove();
         }
         
         // Gets the relevant data
@@ -202,6 +216,13 @@
                 .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
                 .attr("id","timeseries");
         
+        svg.append("defs") // Ensures data doesn't go over the axis when brushing
+            .append("clipPath")
+                .attr("id", "clip")
+            .append("rect")
+                .attr("width", chart_dimensions.width)
+                .attr("height", chart_dimensions.height);
+        
         // Initializes the scales and colors
         x = d3.scaleLinear()
             .domain(d3.extent(relevantData, function(d) {
@@ -223,7 +244,7 @@
         
         // Appends the x axis
         svg.append("g")
-            .attr("class","x axis")
+            .attr("class","x_axis")
             .attr("transform", "translate(0,"+(chart_dimensions.height+1)+")")
             .call(xAxis);
         svg.append("text")
@@ -235,7 +256,7 @@
         
         // Appends the y axis
         svg.append("g")
-            .attr("class","y axis")
+            .attr("class","y_axis")
             .call(yAxis)
         svg.append("text")
             .attr("class","label")
@@ -250,19 +271,20 @@
             .data(relevantData)
             .enter()
             .append("circle")
-            .attr("class", function(d) {
-                return "dot"+d.surname; 
-            })
-            .attr("r", 1)
-            .attr("cx", function(d) { 
-                return x(d.lap);
-            })
-            .attr("cy", function(d) { 
-                return y(d.position);
-            })
-            .style("fill", function(d) {
-                return colors(d.surname); 
-            });
+                .attr("class", function(d) {
+                    return "dot"+d.surname; 
+                })
+                .attr("r", 1)
+                .attr("cx", function(d) { 
+                    return x(d.lap);
+                })
+                .attr("cy", function(d) { 
+                    return y(d.position);
+                })
+                .style("fill", function(d) {
+                    return colors(d.surname); 
+                })
+                .attr("clip-path", "url(#clip)");
             
         // Draws the line that connects the points
         line = d3.line()
@@ -280,15 +302,117 @@
                 .attr('d', line(lineData.get(drivers[i])))
                 .attr("fill", "none")
                 .attr("stroke-width", 1)
+                .attr("stroke", color)
+                .attr("clip-path", "url(#clip)");
+        }
+        
+        // Draw the horizontal brushing
+        drawHorizontalBrushing();
+        
+        // Draws the legend
+        drawLegend();   
+    }
+    
+    // Adds a horizontal brushing graph so that the user can zoom in/out on the timeseries
+    function drawHorizontalBrushing() {
+        // Initializes the empty svg area
+        brushingDiv = document.createElement('div');
+        brushingDiv.id = "brushing";
+        document.body.append(brushingDiv);
+        
+        brushingSvg = d3.select('#brushing')
+            .append('svg')
+                .attr("width", container_dimensions.width + legend_width)
+                .attr("height", brushing_container_height)
+                //.style("background-color", "red")
+            .append("g")
+                .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
+                .attr("id","brushing");
+                
+        // Initializes the scales and colors
+        brushingX = d3.scaleLinear()
+            .domain(d3.extent(relevantData, function(d) {
+                    return +d.lap;
+                    }))
+            .range([0, chart_dimensions.width])
+            
+        brushingY = d3.scaleLinear()
+            .domain(d3.extent(relevantData, function(d) {
+                    return +d.position;
+                    }))
+            .range([0, brushing_height]);
+            
+        // Initializes the axis
+        brushingXAxis= d3.axisBottom(brushingX).ticks().tickFormat(d3.format("d"));
+        
+        // Appends the x axis
+        brushingSvg.append("g")
+            .attr("class", "brushing_x_axis")
+            .attr("transform", "translate(0,"+(brushing_height+1)+")")
+            .call(brushingXAxis);
+        brushingSvg.append("text")
+            .attr("class","label")
+            .attr("x", chart_dimensions.width)
+            .attr("y", brushing_height+(margins.bottom-10))
+            .style("text-anchor","end")
+            .text("Horizontal Brushing");
+            
+        // Draws the line that connects the points
+        brushingLine = d3.line()
+            .x(function(d){
+                return brushingX(d.lap)
+            })
+            .y(function(d){
+                return brushingY(d.position)
+            })
+            .curve(d3.curveLinear);
+        for (i = 0; i < drivers.length; i++) {
+            color = colors(drivers[i]);
+            brushingSvg.append('path')
+                .attr("class", "brushing_path"+drivers[i])
+                .attr('d', brushingLine(lineData.get(drivers[i])))
+                .attr("fill", "none")
+                .attr("stroke-width", 1)
                 .attr("stroke", color);
         }
         
-        // Draws the legend
-        drawLegend(drivers);   
+        // Adds brushing to axis
+        brush = d3.brushX()
+            .extent([[0, 0], [chart_dimensions.width, brushing_height]])
+            .on("brush", function() {
+                // Gets the current selection
+                selection = d3.event.selection;
+                // Refreshes the x domain
+                x.domain(selection.map(brushingX.invert, brushingX));
+                // Refreshes the line
+                line.x(function(d){
+                        return x(d.lap)
+                });
+                // Refreshes the data on the timeseries
+                for (i = 0; i < drivers.length; i++) {
+                    svg.selectAll(".dot"+drivers[i])
+                        .attr("cx", function(d) { 
+                            return x(d.lap); 
+                        })
+                        .attr("cy", function(d) { 
+                            return y(d.position); 
+                        });
+                    svg.select(".path"+drivers[i])
+                        .attr("d", line(lineData.get(drivers[i]))); 
+                }
+                // Refreshes the x axis
+                svg.select(".x_axis").call(xAxis);
+            }); 
+            
+        // Adds brushing to axis
+        brushingSvg.append("g")
+            .attr("class", "brush")
+            .call(brush)
+            .call(brush.move, brushingX.range());  
     }
     
     // Draws the legend for the chart
-    function drawLegend(drivers) {
+    function drawLegend() {
         // Initializes the empty svg area
         wrapper = document.getElementById("wrapper");
         svgLegendDiv = document.createElement('div');
@@ -297,7 +421,7 @@
         
         svgLegend = d3.select('#legendtable')
             .append('svg')
-            .attr("width", 120)
+            .attr("width", legend_width)
             .attr("height", container_dimensions.height)
             //.style("background-color", "red")
             .append("g")
@@ -324,7 +448,7 @@
                 return colors(d);
 			})
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
-                filterChart(colors, d);
+                filterChart(d);
             });
             
         // Writes the text near the small colored rectangles
@@ -339,18 +463,20 @@
                 return d;
             })
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
-                filterChart(colors, d);
+                filterChart(d);
             });
     }
     
     // Filters data on the chart thanks to user's input in the legend
-    function filterChart(colors, d) {
+    function filterChart(d) {
         console.log(d);
         // DISABLE
         if (d3.select(".path"+d).attr("visibility") == "visible") {
             d3.selectAll(".dot"+d)
                 .attr("visibility", "hidden");
             d3.select(".path"+d)
+                .attr("visibility", "hidden");
+            d3.select(".brushing_path"+d)
                 .attr("visibility", "hidden");
             d3.select(".text"+d)
                 .style("fill", "grey");
@@ -362,6 +488,8 @@
             d3.selectAll(".dot"+d)
                 .attr("visibility", "visible");
             d3.select(".path"+d)
+                .attr("visibility", "visible");
+            d3.select(".brushing_path"+d)
                 .attr("visibility", "visible");
             d3.select(".text"+d)
                 .style("fill", "black");
