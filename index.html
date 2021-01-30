@@ -22,7 +22,9 @@
                 width: fit-content;
             }  
             #timeseries {
+                padding-top: 3px;
                 display: inline-block;
+                text-align: center;
             }
             #legendtable {
                 display: inline-block;
@@ -205,6 +207,7 @@
         
         svgDiv = document.createElement('div');
         svgDiv.id = "timeseries";
+        svgDiv.innerHTML = year + " " + document.getElementById("select-race").options[round].innerHTML;
         wrapper.append(svgDiv);
         
         svg = d3.select('#timeseries')
@@ -307,14 +310,14 @@
         }
         
         // Draw the horizontal brushing
-        drawHorizontalBrushing();
+        drawBrushing();
         
         // Draws the legend
         drawLegend();   
     }
     
-    // Adds a horizontal brushing graph so that the user can zoom in/out on the timeseries
-    function drawHorizontalBrushing() {
+    // Adds a brushing graph so that the user can zoom in/out on the timeseries
+    function drawBrushing() {
         // Initializes the empty svg area
         brushingDiv = document.createElement('div');
         brushingDiv.id = "brushing";
@@ -355,7 +358,7 @@
             .attr("x", chart_dimensions.width)
             .attr("y", brushing_height+(margins.bottom-10))
             .style("text-anchor","end")
-            .text("Horizontal Brushing");
+            .text("Zoom Brush");
             
         // Draws the line that connects the points
         brushingLine = d3.line()
@@ -377,17 +380,21 @@
         }
         
         // Adds brushing to axis
-        brush = d3.brushX()
+        brush = d3.brush()
             .extent([[0, 0], [chart_dimensions.width, brushing_height]])
             .on("brush", function() {
                 // Gets the current selection
                 selection = d3.event.selection;
                 // Refreshes the x domain
-                x.domain(selection.map(brushingX.invert, brushingX));
+                x.domain([selection[0][0], selection[1][0]].map(brushingX.invert, brushingX));
+                y.domain([selection[0][1], selection[1][1]].map(brushingY.invert, brushingY));
                 // Refreshes the line
                 line.x(function(d){
-                        return x(d.lap)
-                });
+                        return x(d.lap);
+                    })
+                    .y(function(d) {
+                        return y(d.position);
+                    });
                 // Refreshes the data on the timeseries
                 for (i = 0; i < drivers.length; i++) {
                     svg.selectAll(".dot"+drivers[i])
@@ -402,13 +409,21 @@
                 }
                 // Refreshes the x axis
                 svg.select(".x_axis").call(xAxis);
+                svg.select(".y_axis").call(yAxis);
             }); 
             
         // Adds brushing to axis
         brushingSvg.append("g")
             .attr("class", "brush")
             .call(brush)
-            .call(brush.move, brushingX.range());  
+            .call(brush.move, [[0,0],[chart_dimensions.width, brushing_height]]);  
+            
+        // Restore brush
+        brushingSvg.on("click", function() {
+            d3.select(".brush")
+                .call(brush)
+                .call(brush.move, [[0,0],[chart_dimensions.width, brushing_height]]);  
+        });
     }
     
     // Draws the legend for the chart
