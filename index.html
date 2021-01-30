@@ -30,14 +30,25 @@
 	</head>
     
     <body>
-    <script charset="utf-8">
-    function init() {
+    <script charset="utf-8"> 
+    // Global variables
+    var container_dimensions = {width: 1050, height: 400}; // width: 650
+    var margins = {top: 10, right: 20, bottom: 40, left: 40};
+    var chart_dimensions = {
+            width: container_dimensions.width - margins.left - margins.right,
+            height: container_dimensions.height - margins.top - margins.bottom
+    };
+    
+    // Draw the title above the charts
+    function drawTitle() {
+        // Creates the div 'title' which contains text, selections and buttons
         title = document.createElement('div');
         title.id = "title";
         title.innerHTML = "<h1>Formula 1 Visual Analytics Project</h1>";
         title.innerHTML += "Please select a race: ";
         document.body.appendChild(title);
     
+        // Creates a selection for the seasons with a default option, and adds it to 'title'
         selectSeason = document.createElement('select');
         selectSeason.id = "select-season";
         defaultSeasonOption = document.createElement('option');
@@ -47,6 +58,7 @@
         title.appendChild(selectSeason);
         title.innerHTML += "&nbsp";
     
+        // Creates a selection for the races with a default option, and adds it to 'title'
         selectRace = document.createElement('select');
         selectRace.id = "select-race";
         selectRace.style.width = '150px';
@@ -57,31 +69,63 @@
         title.appendChild(selectRace);
         title.innerHTML += "&nbsp";
     
+        // Creates the search button, makes it disabled and adds it to 'title'
         search = document.createElement('button');
         search.id = "search";
         search.innerHTML = "Search data!";
         search.disabled = true;
         title.appendChild(search);
         
-        d3.csv("lapsLight.csv", function(data) {
-            seasons = [];
-            data.forEach(function(d) {
-                //console.log(d);
-                if (!seasons.includes(d.year)) {
-                    seasons.push(d.year);
-                    newSeasonOption = document.createElement('option');
-                    newSeasonOption.value = d.year;
-                    newSeasonOption.innerHTML = d.year;
-                    document.getElementById("select-season").appendChild(newSeasonOption);
-                }
-                document.getElementById("select-season").onchange = function() {loadRaces(data)};    
-                document.getElementById("select-race").onchange = function() {ready()};
-                search.onclick = function() {plotGraphs(data, document.getElementById("select-season").value, document.getElementById("select-race").value)}
-            });
+        // Loads the data from the csv file
+        loadData();
+    }
+    
+    // Loads the data from the csv file
+    function loadData() {
+        d3.csv("laps.csv", function(error, data) {
+            // Prints the error in case something goes wrong
+            if (error) {
+                console.log(error);
+            }
+            // Everything goes ok!
+            else {
+                seasons = []; // Contains all distinct seasons inside the csv file
+                data.forEach(function(d) { // Cycles through the data
+                    // console.log(d);
+                    d.surname = d.surname.replace(/\s/g, '_'); // Removes eventual spaces in the surnames
+                    if (d.surname == "Schumacher") { // Separetes Ralph and Michael Schumacher
+                        d.surname = d.surname + "_" + d.forename[0];
+                    }
+                    if (!seasons.includes(d.year)) { // Check if the season is new
+                        seasons.push(d.year); // Adds the season to the list
+                        newSeasonOption = document.createElement('option'); // Makes the new season a selectable option 
+                        newSeasonOption.value = d.year;
+                        newSeasonOption.innerHTML = d.year;
+                        document.getElementById("select-season").appendChild(newSeasonOption); // Adds the new option to the selection
+                    }
+                });
+                activateInputEventsTitle(data); // Adds the events to the user's selections in the title now that the data is loaded
+            }
         });
     }
     
-    function loadRaces(data) {
+    // Adds events to the user's selections in the title now that the data is loaded
+    function activateInputEventsTitle(data) {
+        document.getElementById("select-season").onchange = function() { // Checks if the user selects a season
+            addRaces(data); // Adds the list of races belonging to that season to the races selection
+        }    
+        document.getElementById("select-race").onchange = function() { // Checks if the user selects a race
+            isReady(); // Checks if to unlock the search button
+        }
+        search.onclick = function() { // Checks if the user clicks the search button
+            plotTimeSeriesGraph(data, 
+                document.getElementById("select-season").value, 
+                document.getElementById("select-race").value) // Draws the data
+        }
+    }
+    
+    // Adds a list of races belonging to that season to the races selection
+    function addRaces(data) {
         // RESTORE SELECTOR
         document.getElementById("search").disabled = true; // Disables the search button
         document.getElementById("select-race").value = 0; // Restore the race selector to the default option
@@ -102,12 +146,12 @@
                     newRaceOption.innerHTML = d.race;
                     document.getElementById("select-race").appendChild(newRaceOption);
                 }
-            });
-            
+            });   
         }
     }
 
-    function ready() {
+    // Checks if to unlock the search button after the user has chosen a track
+    function isReady() {
         if (document.getElementById("select-race").value > 0) {  // A valid race is selected: enables search button
             document.getElementById("search").disabled = false;
         }
@@ -116,20 +160,13 @@
         }
     }
     
-    function plotGraphs(data, year, round) {
+    // Draws the graph that contains the timeseries lap/position
+    function plotTimeSeriesGraph(data, year, round) {
         // Removes the previous graph
         previousGraph = document.getElementById("wrapper");
         if (document.body.contains(previousGraph)) {
             previousGraph.remove();
         }
-    
-        // Initializes the dimensions
-        container_dimensions = {width: 1050, height: 400}; // width: 650
-        margins = {top: 10, right: 20, bottom: 40, left: 40};
-        chart_dimensions = {
-            width: container_dimensions.width - margins.left - margins.right,
-            height: container_dimensions.height - margins.top - margins.bottom
-        };
         
         // Gets the relevant data
         relevantData = [];
@@ -229,8 +266,12 @@
             
         // Draws the line that connects the points
         line = d3.line()
-            .x(function(d){return x(d.lap)})
-            .y(function(d){return y(d.position)})
+            .x(function(d){
+                return x(d.lap)
+            })
+            .y(function(d){
+                return y(d.position)
+            })
             .curve(d3.curveLinear);
         for (i = 0; i < drivers.length; i++) {
             color = colors(drivers[i]);
@@ -243,19 +284,27 @@
         }
         
         // Draws the legend
+        drawLegend(drivers);   
+    }
+    
+    // Draws the legend for the chart
+    function drawLegend(drivers) {
+        // Initializes the empty svg area
+        wrapper = document.getElementById("wrapper");
         svgLegendDiv = document.createElement('div');
         svgLegendDiv.id = "legendtable";
         wrapper.append(svgLegendDiv);
         
         svgLegend = d3.select('#legendtable')
             .append('svg')
-            .attr("width", 110)
+            .attr("width", 120)
             .attr("height", container_dimensions.height)
             //.style("background-color", "red")
             .append("g")
             .attr("transform", "translate(" + 0 + "," + margins.top + ")")
             .attr("id","legendtable");
           
+        // Draws the small colored rectangles
         sizeSquare = 10;
         legend = svgLegend.selectAll("legend")
             .data(drivers)
@@ -273,9 +322,12 @@
             })
 			.style("fill", function(d){
                 return colors(d);
-			});
+			})
+            .on("click", function(d) { // User disables/enables data of a pilot in the graph
+                filterChart(colors, d);
+            });
             
-        // Writes text on the legend
+        // Writes the text near the small colored rectangles
         legend.append("text")
             .attr("class", function(d) {
                 return "text"+d;
@@ -287,33 +339,38 @@
                 return d;
             })
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
-                // DISABLE
-                if (d3.select(".path"+d).attr("visibility") == "visible") {
-                    d3.selectAll(".dot"+d)
-                        .attr("visibility", "hidden");
-                    d3.select(".path"+d)
-                        .attr("visibility", "hidden");
-                    d3.select(".text"+d)
-                        .style("fill", "grey");
-                    d3.select(".rect"+d)
-                        .style("fill", "grey");
-                }
-                // ENABLE
-                else {
-                    d3.selectAll(".dot"+d)
-                        .attr("visibility", "visible");
-                    d3.select(".path"+d)
-                        .attr("visibility", "visible");
-                    d3.select(".text"+d)
-                        .style("fill", "black");
-                    d3.select(".rect"+d)
-                        .style("fill", colors(d));
-                }   
+                filterChart(colors, d);
             });
-        
     }
     
-    init();
+    // Filters data on the chart thanks to user's input in the legend
+    function filterChart(colors, d) {
+        console.log(d);
+        // DISABLE
+        if (d3.select(".path"+d).attr("visibility") == "visible") {
+            d3.selectAll(".dot"+d)
+                .attr("visibility", "hidden");
+            d3.select(".path"+d)
+                .attr("visibility", "hidden");
+            d3.select(".text"+d)
+                .style("fill", "grey");
+            d3.select(".rect"+d)
+                .style("fill", "grey");
+        }
+        // ENABLE
+        else {
+            d3.selectAll(".dot"+d)
+                .attr("visibility", "visible");
+            d3.select(".path"+d)
+                .attr("visibility", "visible");
+            d3.select(".text"+d)
+                .style("fill", "black");
+            d3.select(".rect"+d)
+                .style("fill", colors(d));
+       }   
+    }
+        
+    drawTitle();
     </script>
     </body>
 </html>
