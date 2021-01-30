@@ -385,9 +385,11 @@
             .on("brush", function() {
                 // Gets the current selection
                 selection = d3.event.selection;
-                // Refreshes the x domain
+                
+                // Refreshes the domains
                 x.domain([selection[0][0], selection[1][0]].map(brushingX.invert, brushingX));
                 y.domain([selection[0][1], selection[1][1]].map(brushingY.invert, brushingY));
+                
                 // Refreshes the line
                 line.x(function(d){
                         return x(d.lap);
@@ -395,6 +397,7 @@
                     .y(function(d) {
                         return y(d.position);
                     });
+                    
                 // Refreshes the data on the timeseries
                 for (i = 0; i < drivers.length; i++) {
                     svg.selectAll(".dot"+drivers[i])
@@ -407,18 +410,19 @@
                     svg.select(".path"+drivers[i])
                         .attr("d", line(lineData.get(drivers[i]))); 
                 }
-                // Refreshes the x axis
+                
+                // Refreshes the axis
                 svg.select(".x_axis").call(xAxis);
                 svg.select(".y_axis").call(yAxis);
             }); 
             
-        // Adds brushing to axis
+        // Adds a brush that selects the whole brushingSvg as default
         brushingSvg.append("g")
             .attr("class", "brush")
             .call(brush)
             .call(brush.move, [[0,0],[chart_dimensions.width, brushing_height]]);  
             
-        // Restore brush
+        // Restore full selection when there's no selection
         brushingSvg.on("click", function() {
             d3.select(".brush")
                 .call(brush)
