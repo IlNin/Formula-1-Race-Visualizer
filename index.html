@@ -42,7 +42,7 @@
     <script charset="utf-8"> 
     // Global variables
     var container_dimensions = {width: 1200, height: 400}; // width: 650
-    var margins = {top: 10, right: 20, bottom: 40, left: 40};
+    var margins = {top: 20, right: 20, bottom: 40, left: 40};
     var chart_dimensions = {
             width: container_dimensions.width - margins.left - margins.right,
             height: container_dimensions.height - margins.top - margins.bottom
@@ -53,6 +53,8 @@
     
     var x, y, xAxis, yAxis, svg, line;
     var drivers, colors, lineData;
+    
+    var invisibleAtStart = false; // DEBUG
     
     // Draw the title above the charts
     function drawTitle() {
@@ -223,8 +225,9 @@
             .append("clipPath")
                 .attr("id", "clip")
             .append("rect")
-                .attr("width", chart_dimensions.width)
-                .attr("height", chart_dimensions.height);
+                .attr("width", chart_dimensions.width+6)
+                .attr("height", chart_dimensions.height+6)
+                .attr("transform", "translate(" + -3 + "," + -3 + ")");
         
         // Initializes the scales and colors
         x = d3.scaleLinear()
@@ -277,7 +280,7 @@
                 .attr("class", function(d) {
                     return "dot"+d.surname; 
                 })
-                .attr("r", 1)
+                .attr("r", 3)
                 .attr("cx", function(d) { 
                     return x(d.lap);
                 })
@@ -306,14 +309,61 @@
                 .attr("fill", "none")
                 .attr("stroke-width", 1)
                 .attr("stroke", color)
-                .attr("clip-path", "url(#clip)");
+                .attr("clip-path", "url(#clip)")
+                .attr("visibility", function() { // DEBUG
+                    if (invisibleAtStart)
+                        return "visible";
+                    else
+                        return "hidden";
+                })
+                .on("mouseover", function() {
+                    // Adds driver's name when hovering over a line
+                    coords = d3.mouse(this);
+                    surname = d3.select(this).attr("class").slice(4);
+                    d3.select(this).attr("stroke-width", 5);
+                    
+                    svg.append('text')
+                        .attr("class", "path_label"+surname)
+                        .attr("fill", colors(surname))
+                        .attr("x", coords[0]+5)
+                        .attr("y", coords[1]-5)
+                        .text(surname); 
+                        
+                    /*g = svg.append("g")
+                        .attr("class", "path_label"+surname);
+                    g.append('rect')
+                        .attr("x", coords[0]+5)
+                        .attr("y", coords[1]-20)
+                        .attr("width", surname.length*9)
+                        .attr("height", 20)
+                        .attr("stroke", "black")
+                        .style("fill", "white");
+                    g.append('text')
+                        .attr("x", coords[0]+5)
+                        .attr("y", coords[1]-5)
+                        .attr("fill", colors(surname))
+                        .text(surname); */
+                })
+                .on("mouseout", function() {
+                    // Removes driver's name after stopping hovering over a line
+                    surname = d3.select(this).attr("class").slice(4);
+                    d3.select(this).attr("stroke-width", 1);
+                    d3.select(".path_label"+surname)
+                        .remove()
+                });
         }
         
         // Draw the horizontal brushing
         drawBrushing();
         
         // Draws the legend
-        drawLegend();   
+        drawLegend();  
+        
+        // DEBUG
+        for (i = 0; i < drivers.length; i++) {
+            console.log(d3.select(".path"+drivers[i]));
+            filterChart(drivers[i]);
+        }
     }
     
     // Adds a brushing graph so that the user can zoom in/out on the timeseries
@@ -484,11 +534,11 @@
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
                 filterChart(d);
             });
+        
     }
     
     // Filters data on the chart thanks to user's input in the legend
     function filterChart(d) {
-        console.log(d);
         // DISABLE
         if (d3.select(".path"+d).attr("visibility") == "visible") {
             d3.selectAll(".dot"+d)
