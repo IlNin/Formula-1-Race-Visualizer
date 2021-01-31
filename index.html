@@ -54,7 +54,11 @@
     var x, y, xAxis, yAxis, svg, line;
     var drivers, colors, lineData;
     
-    var invisibleAtStart = false; // DEBUG
+    var invisibleAtStart = true; // DEBUG
+    
+    var enableAnimations = true;
+    var path_animation_duration = 5000;
+    var dots_animation_duration = 2000;
     
     // Draw the title above the charts
     function drawTitle() {
@@ -272,27 +276,34 @@
             .style("text-anchor","end")
             .text("Position");
         
-        // Populates the chart        
-        svg.selectAll("circle")
-            .data(relevantData)
-            .enter()
-            .append("circle")
-                .attr("class", function(d) {
-                    return "dot"+d.surname; 
-                })
-                .attr("r", 3)
-                .attr("cx", function(d) { 
-                    return x(d.lap);
-                })
-                .attr("cy", function(d) { 
-                    return y(d.position);
-                })
-                .style("fill", function(d) {
-                    return colors(d.surname); 
-                })
-                .attr("clip-path", "url(#clip)");
+        // Populates the chart
+        for (i = 0; i < drivers.length; i++) {
+            svg.selectAll(".dot"+drivers[i])
+                .data(lineData.get(drivers[i]))
+                .enter()
+                .append("circle")
+                    .attr("class", function(d) {
+                        return "dot"+d.surname; 
+                    })
+                    .attr("r", 3)
+                    .attr("cx", function(d) { 
+                        return x(d.lap);
+                    })
+                    .attr("cy", function(d) { 
+                        return y(d.position);
+                    })
+                    .style("fill", function(d) {
+                        return colors(d.surname); 
+                    })
+                    .attr("clip-path", "url(#clip)")
+                    .style("opacity", 0)
+                    .transition()
+                        .delay(path_animation_duration)
+                        .duration(dots_animation_duration)
+                        .style("opacity", 1);
+        }
             
-        // Draws the line that connects the points
+        // Initializes the line
         line = d3.line()
             .x(function(d){
                 return x(d.lap)
@@ -301,9 +312,11 @@
                 return y(d.position)
             })
             .curve(d3.curveLinear);
+         
+        // Draws the paths on the graph
         for (i = 0; i < drivers.length; i++) {
             color = colors(drivers[i]);
-            svg.append('path')
+            path = svg.append('path')
                 .attr("class", "path"+drivers[i])
                 .attr('d', line(lineData.get(drivers[i])))
                 .attr("fill", "none")
@@ -316,7 +329,9 @@
                     else
                         return "hidden";
                 })
-                .on("mouseover", function() {
+                
+            // Handles input events on patch
+            path.on("mouseover", function() {
                     // Adds driver's name when hovering over a line
                     coords = d3.mouse(this);
                     surname = d3.select(this).attr("class").slice(4);
@@ -351,6 +366,9 @@
                     d3.select(".path_label"+surname)
                         .remove()
                 });
+            
+            // Creates path animation
+            pathAnimation(path);
         }
         
         // Draw the horizontal brushing
@@ -361,7 +379,6 @@
         
         // DEBUG
         for (i = 0; i < drivers.length; i++) {
-            console.log(d3.select(".path"+drivers[i]));
             filterChart(drivers[i]);
         }
     }
@@ -421,12 +438,13 @@
             .curve(d3.curveLinear);
         for (i = 0; i < drivers.length; i++) {
             color = colors(drivers[i]);
-            brushingSvg.append('path')
+            path = brushingSvg.append('path')
                 .attr("class", "brushing_path"+drivers[i])
                 .attr('d', brushingLine(lineData.get(drivers[i])))
                 .attr("fill", "none")
                 .attr("stroke-width", 1)
                 .attr("stroke", color);
+            pathAnimation(path);   
         }
         
         // Adds brushing to axis
@@ -457,8 +475,10 @@
                         .attr("cy", function(d) { 
                             return y(d.position); 
                         });
-                    svg.select(".path"+drivers[i])
+                    path = svg.select(".path"+drivers[i])
                         .attr("d", line(lineData.get(drivers[i]))); 
+                    pathLength = path.node().getTotalLength();
+                    path.attr("stroke-dasharray", pathLength + " " + pathLength)
                 }
                 
                 // Refreshes the axis
@@ -539,33 +559,59 @@
     
     // Filters data on the chart thanks to user's input in the legend
     function filterChart(d) {
-        // DISABLE
+        // Filters paths and dots of a driver
         if (d3.select(".path"+d).attr("visibility") == "visible") {
             d3.selectAll(".dot"+d)
-                .attr("visibility", "hidden");
+                .attr("visibility", "hidden")
+                .interrupt(); // Interrupt animation if there is one ongoing
             d3.select(".path"+d)
-                .attr("visibility", "hidden");
+                .attr("visibility", "hidden")
+                .interrupt();
             d3.select(".brushing_path"+d)
-                .attr("visibility", "hidden");
+                .attr("visibility", "hidden")
+                .interrupt();
             d3.select(".text"+d)
                 .style("fill", "grey");
             d3.select(".rect"+d)
                 .style("fill", "grey");
         }
-        // ENABLE
+        // Enables paths and dots of a driver
         else {
+            path = d3.select(".path"+d)
+                .attr("visibility", "visible");
+            pathAnimation(path);
+                    
             d3.selectAll(".dot"+d)
+                .attr("visibility", "visible")
+                .style("opacity", 0)
+                .transition()
+                    .delay(path_animation_duration)
+                    .duration(dots_animation_duration)
+                    .style("opacity", 1);
+                    
+            path = d3.select(".brushing_path"+d)
                 .attr("visibility", "visible");
-            d3.select(".path"+d)
-                .attr("visibility", "visible");
-            d3.select(".brushing_path"+d)
-                .attr("visibility", "visible");
+            pathAnimation(path);
+                    
             d3.select(".text"+d)
                 .style("fill", "black");
             d3.select(".rect"+d)
                 .style("fill", colors(d));
        }   
     }
+    
+    // Animates the path upon first visualization
+    function pathAnimation(path) {
+        if (enableAnimations) {
+            pathLength = path.node().getTotalLength();
+                path.attr("stroke-dasharray", pathLength + " " + pathLength)
+                    .attr("stroke-dashoffset", pathLength)
+                    .transition()
+                        .duration(path_animation_duration)
+                        .attr("stroke-dashoffset", 0);
+        }
+    }
+        
         
     drawTitle();
     </script>
