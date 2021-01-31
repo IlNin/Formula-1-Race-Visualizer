@@ -54,11 +54,13 @@
     var x, y, xAxis, yAxis, svg, line;
     var drivers, colors, lineData;
     
-    var invisibleAtStart = true; // DEBUG
+    var invisibleAtStart = false; // DEBUG
     
     var enableAnimations = true;
     var path_animation_duration = 5000;
     var dots_animation_duration = 2000;
+    
+    var pathsClicked = [];
     
     // Draw the title above the charts
     function drawTitle() {
@@ -103,7 +105,7 @@
     
     // Loads the data from the csv file
     function loadData() {
-        d3.csv("laps.csv", function(error, data) {
+        d3.csv("lapsNew.csv", function(error, data) {
             // Prints the error in case something goes wrong
             if (error) {
                 console.log(error);
@@ -275,33 +277,6 @@
             .attr("dy","-1.5em")
             .style("text-anchor","end")
             .text("Position");
-        
-        // Populates the chart
-        for (i = 0; i < drivers.length; i++) {
-            svg.selectAll(".dot"+drivers[i])
-                .data(lineData.get(drivers[i]))
-                .enter()
-                .append("circle")
-                    .attr("class", function(d) {
-                        return "dot"+d.surname; 
-                    })
-                    .attr("r", 3)
-                    .attr("cx", function(d) { 
-                        return x(d.lap);
-                    })
-                    .attr("cy", function(d) { 
-                        return y(d.position);
-                    })
-                    .style("fill", function(d) {
-                        return colors(d.surname); 
-                    })
-                    .attr("clip-path", "url(#clip)")
-                    .style("opacity", 0)
-                    .transition()
-                        .delay(path_animation_duration)
-                        .duration(dots_animation_duration)
-                        .style("opacity", 1);
-        }
             
         // Initializes the line
         line = d3.line()
@@ -332,7 +307,7 @@
                 
             // Handles input events on patch
             path.on("mouseover", function() {
-                    // Adds driver's name when hovering over a line
+                    // Adds driver's name when hovering over a line, while making it bigger
                     coords = d3.mouse(this);
                     surname = d3.select(this).attr("class").slice(4);
                     d3.select(this).attr("stroke-width", 5);
@@ -362,17 +337,64 @@
                 .on("mouseout", function() {
                     // Removes driver's name after stopping hovering over a line
                     surname = d3.select(this).attr("class").slice(4);
-                    d3.select(this).attr("stroke-width", 1);
                     d3.select(".path_label"+surname)
-                        .remove()
+                            .remove();
+                    // Makes line small again if not clicked
+                    if (!pathsClicked.includes(surname)) {
+                        d3.select(this).attr("stroke-width", 1);
+                    }
+                })
+                .on("click", function() {
+                    surname = d3.select(this).attr("class").slice(4);
+                    // Adds the clicked path to the list of clicked path
+                    if (!pathsClicked.includes(surname)) {
+                        pathsClicked.push(surname);
+                    }
+                    // The path was already clicked before: it is removed from the list
+                    else {
+                        index = pathsClicked.indexOf(surname);
+                        pathsClicked.splice(index, 1);
+                        d3.select(this).attr("stroke-width", 1);
+                    }
                 });
-            
+                             
             // Creates path animation
             pathAnimation(path);
         }
         
-        // Draw the horizontal brushing
-        drawBrushing();
+        // Populates the chart with the dots
+        for (i = 0; i < drivers.length; i++) {
+            svg.selectAll(".dot"+drivers[i])
+                .data(lineData.get(drivers[i]))
+                .enter()
+                .append("circle")
+                    .attr("class", function(d) {
+                        return "dot"+d.surname; 
+                    })
+                    .attr("r", 3)
+                    .attr("cx", function(d) { 
+                        return x(d.lap);
+                    })
+                    .attr("cy", function(d) { 
+                        return y(d.position);
+                    })
+                    .style("fill", function(d) {
+                        return colors(d.surname); 
+                    })
+                    .attr("clip-path", "url(#clip)")
+                    .style("opacity", 0)
+                    .on("mouseover", function(d) {
+                        d3.select(this).attr("r", 5); })
+                    .on("mouseout", function(d) {
+                        d3.select(this).attr("r", 3); })
+                    .transition()
+                        .delay(path_animation_duration)
+                        .duration(dots_animation_duration)
+                        .style("opacity", 1);
+        }
+            
+        // Draw the zoom brushing chart
+        plotBrushingChart();
         
         // Draws the legend
         drawLegend();  
@@ -381,10 +403,11 @@
         for (i = 0; i < drivers.length; i++) {
             filterChart(drivers[i]);
         }
+        
     }
     
     // Adds a brushing graph so that the user can zoom in/out on the timeseries
-    function drawBrushing() {
+    function plotBrushingChart() {
         // Initializes the empty svg area
         brushingDiv = document.createElement('div');
         brushingDiv.id = "brushing";
@@ -611,8 +634,7 @@
                         .attr("stroke-dashoffset", 0);
         }
     }
-        
-        
+              
     drawTitle();
     </script>
     </body>
