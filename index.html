@@ -23,11 +23,12 @@
                 animation-duration: 2s;
             }
             #options {
-                width: 300px;
                 border: 3px solid black;
                 border-left: none;
                 text-align: center;
                 padding-top: 5px;
+                padding-left: 5px;
+                padding-right: 5px;
                 display: inline-block;
                 background: yellow;
                 animation-name: fadeInOpacity;
@@ -93,9 +94,9 @@
     var x, y, xAxis, yAxis, svg, line;
     var drivers, colors, lineData;
     
-    var invisibleAtStart = false; // DEBUG
+    var invisibleAtStart = false;
     
-    var enableAnimations = true; // DEBUG
+    var enableAnimations = true;
     var path_animation_duration = 5000;
     var dots_animation_duration = 2000;
     
@@ -342,12 +343,7 @@
                 .attr("stroke-width", 1)
                 .attr("stroke", color)
                 .attr("clip-path", "url(#clip)")
-                .attr("visibility", function() { // DEBUG
-                    if (invisibleAtStart)
-                        return "visible";
-                    else
-                        return "hidden";
-                })
+                .attr("visibility", "visible");
                 
             // Handles input events when interacting with a path
             path.on("mouseover", function() {
@@ -491,9 +487,11 @@
         // Draws the legend
         drawLegend();  
         
-        // DEBUG
-        for (i = 0; i < drivers.length; i++) {
-            filterChart(drivers[i]);
+        // Disable all data if the user has selected that option
+        if (invisibleAtStart) {
+            for (i = 0; i < drivers.length; i++) {
+                filterChart(drivers[i]);
+            }
         }
         
         // Adds the option div if not previously added
@@ -705,6 +703,7 @@
     
     // Filters data on the chart thanks to user's input in the legend
     function filterChart(d) {
+                    console.log("Sono qui!");
         // Filters paths and dots of a driver
         if (d3.select(".path"+d).attr("visibility") == "visible") {
             d3.selectAll(".dot"+d)
@@ -748,11 +747,11 @@
         optionsDiv = document.createElement('div');
         optionsDiv.id = "options";
         optionsDiv.offsetHeight = document.getElementById("title").offsetHeight;
-        optionsDiv.innerHTML = "OPTIONS<br>";
+        optionsDiv.innerHTML = "<b>OPTIONS</b><br>";
         document.getElementById("abovewrapper").appendChild(optionsDiv);
         
         // Add animations options
-        optionsDiv.innerHTML += "Animations: ";
+        optionsDiv.innerHTML += "Animations: <br>";
         animationsEnabledButton = document.createElement('input');
         animationsEnabledButton.type = 'radio';
         animationsEnabledButton.name = 'animations';
@@ -763,7 +762,6 @@
         optionsDiv.appendChild(animationsEnabledButton);
         optionsDiv.appendChild(label);
         optionsDiv.innerHTML += "   ";
-        document.getElementById("enable-animations").checked = true;
         
         animationsDisabledButton = document.createElement('input');
         animationsDisabledButton.type = 'radio';
@@ -774,16 +772,49 @@
         label.innerHTML = "Disabled";
         optionsDiv.appendChild(animationsDisabledButton);
         optionsDiv.appendChild(label);
+        optionsDiv.innerHTML += "<br>";
         
+        // Asks if all drivers' data is shown when first loading the chart
+        optionsDiv.innerHTML += "Show All Upon First Loading: <br>";
+        showAllEnabledButton = document.createElement('input');
+        showAllEnabledButton.type = 'radio';
+        showAllEnabledButton.name = 'showall';
+        showAllEnabledButton.id = 'enable-showall';
+        showAllEnabledButton.value = "Enabled";
+        label = document.createElement('label');
+        label.innerHTML = "Enabled";
+        optionsDiv.appendChild(showAllEnabledButton);
+        optionsDiv.appendChild(label);
+        optionsDiv.innerHTML += "   ";
+        
+        showAllDisabledButton = document.createElement('input');
+        showAllDisabledButton.type = 'radio';
+        showAllDisabledButton.name = 'showall';
+        showAllDisabledButton.id = 'disable-showall';
+        showAllDisabledButton.value = "Disabled";
+        label = document.createElement('label');
+        label.innerHTML = "Disabled";
+        optionsDiv.appendChild(showAllDisabledButton);
+        optionsDiv.appendChild(label);   
+        
+        document.getElementById("enable-animations").checked = true; 
+        document.getElementById("enable-showall").checked = true;
         activateInputEventsOptions();
     }
     
+    // Adds events to the list of options
     function activateInputEventsOptions() {
         document.getElementById("enable-animations").onclick = function() {
             enableAnimations = true;
         }
         document.getElementById("disable-animations").onclick = function() {
             enableAnimations = false;
+        }
+         document.getElementById("enable-showall").onclick = function() {
+            invisibleAtStart = false;
+        }
+        document.getElementById("disable-showall").onclick = function() {
+            invisibleAtStart = true;
         }
     }
     
@@ -809,8 +840,7 @@
                     .style("opacity", 1);
         }
     }
-            
-              
+                       
     drawTitle();
     </script>
     </body>
