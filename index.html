@@ -276,9 +276,9 @@
             .append("clipPath")
                 .attr("id", "clip")
             .append("rect")
-                .attr("width", chart_dimensions.width+6)
-                .attr("height", chart_dimensions.height+6)
-                .attr("transform", "translate(" + -3 + "," + -3 + ")");
+                .attr("width", chart_dimensions.width + 6)
+                .attr("height", chart_dimensions.height + 11)
+                .attr("transform", "translate(" + -3 + "," + -6 + ")");
         
         // Initializes the scales and colors
         x = d3.scaleLinear()
@@ -751,7 +751,7 @@
         document.getElementById("abovewrapper").appendChild(optionsDiv);
         
         // Add animations options
-        optionsDiv.innerHTML += "Animations: <br>";
+        optionsDiv.innerHTML += "- Animations -<br>";
         animationsEnabledButton = document.createElement('input');
         animationsEnabledButton.type = 'radio';
         animationsEnabledButton.name = 'animations';
@@ -775,7 +775,7 @@
         optionsDiv.innerHTML += "<br>";
         
         // Asks if all drivers' data is shown when first loading the chart
-        optionsDiv.innerHTML += "Show All Upon First Loading: <br>";
+        optionsDiv.innerHTML += "- Show All Upon First Loading -<br>";
         showAllEnabledButton = document.createElement('input');
         showAllEnabledButton.type = 'radio';
         showAllEnabledButton.name = 'showall';
