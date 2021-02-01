@@ -5,6 +5,10 @@
         <title>Formula 1 VA Project</title>
         <script type="text/javascript" src="d3.js" charset="utf-8"></script>
         <style>
+            #abovewrapper {
+                width: fit-content;
+                display: flex;
+            }
             #title {
                 border: 3px solid black;
                 padding-left: 5px;
@@ -18,6 +22,19 @@
                 animation-timing-function: ease-in;
                 animation-duration: 2s;
             }
+            #options {
+                width: 300px;
+                border: 3px solid black;
+                border-left: none;
+                text-align: center;
+                padding-top: 5px;
+                display: inline-block;
+                background: yellow;
+                animation-name: fadeInOpacity;
+                animation-iteration-count: 1;
+                animation-timing-function: ease-in;
+                animation-duration: 2s;
+            } 
             #wrapper {
                 display: flex;
                 border: 3px solid black;
@@ -86,12 +103,17 @@
     
     // Draw the title above the charts
     function drawTitle() {
+        // Creates the wrapper div that contains the div 'title'
+        aboveWrapper = document.createElement('div');
+        aboveWrapper.id = "abovewrapper";
+        document.body.appendChild(aboveWrapper);
+        
         // Creates the div 'title' which contains text, selections and buttons
         title = document.createElement('div');
         title.id = "title";
         title.innerHTML = "<h1>Formula 1 Visual Analytics Project</h1>";
         title.innerHTML += "Please select a race: ";
-        document.body.appendChild(title);
+        aboveWrapper.appendChild(title);
     
         // Creates a selection for the seasons with a default option, and adds it to 'title'
         selectSeason = document.createElement('select');
@@ -207,7 +229,7 @@
     
     // Draws the graph that contains the timeseries lap/position
     function plotTimeSeriesGraph(data, year, round) {
-        // Removes the previous graph
+        // Removes the previous graph and option screen
         previousGraph = document.getElementById("wrapper");
         if (document.body.contains(previousGraph)) {
             previousGraph.remove();
@@ -385,7 +407,7 @@
         
         // Populates the chart with the dots
         for (i = 0; i < drivers.length; i++) {
-            svg.selectAll(".dot"+drivers[i])
+            dots = svg.selectAll(".dot"+drivers[i])
                 .data(lineData.get(drivers[i]))
                 .enter()
                 .append("circle")
@@ -402,63 +424,65 @@
                     .style("fill", function(d) {
                         return colors(d.surname); 
                     })
-                    .attr("clip-path", "url(#clip)")
-                    .style("opacity", 0)
-                    .on("mouseover", function(d) {
-                        coords = d3.mouse(this);
+                    .attr("clip-path", "url(#clip)");
+            
+            // Handles the input events when interacting with a point            
+            dots.on("mouseover", function(d) {
+                    coords = d3.mouse(this);
                         
-                        // Makes the point bigger and with a black outline
-                        d3.select(this)
-                            .attr("r", 5)
-                            .attr("stroke", "black");
+                    // Makes the point bigger and with a black outline
+                    d3.select(this)
+                        .attr("r", 5)
+                        .attr("stroke", "black");
 
-                         // Adds lap's information near the mouse location
-                        g = svg.append("g") // Each text label will be inside a black outlined rect in g
+                    // Adds lap's information near the mouse location
+                    g = svg.append("g") // Each text label will be inside a black outlined rect in g
                             .attr("class", "lap_label"+d.surname);
-                        text = d.surname.substring(0, 3).toUpperCase() + " [L: " + d.lap + ", P: " + d.position + "]";
-                        rect = g.append('rect')
-                            .attr("x", coords[0]+1)
-                            .attr("y", coords[1]-20)
-                            .attr("width", text.length*7)
-                            .attr("height", 20)
-                            .attr("stroke", "black")
-                            .style("fill", "white"); 
-                        if (d.lap < (x.domain()[0]+x.domain()[1])/2) {
-                            rect.attr("x", coords[0]+1)
-                                .attr("y", coords[1]-20);
-                            g.append('text')
-                                .attr("x", coords[0]+5)
-                                .attr("y", coords[1]-5)
-                                .attr("fill", colors(d.surname))
-                                .text(text);
-                        }
-                        else {
-                            rect.attr("x", coords[0]-100)
-                                .attr("y", coords[1]-20);
-                            g.append('text')
-                                .attr("x", coords[0]-96)
-                                .attr("y", coords[1]-5)
-                                .attr("fill", colors(d.surname))
-                                .text(text);             
-                        }              
-                    })
-                    .on("mouseout", function(d) {
-                        // Remove the black outline and label
-                        d3.select(this) 
-                            .attr("stroke", "none");
-                        d3.select(".lap_label"+d.surname)
-                            .remove();
+                    text = d.surname.substring(0, 3).toUpperCase() + " [L: " + d.lap + ", P: " + d.position + "]";
+                    rect = g.append('rect')
+                        .attr("x", coords[0]+1)
+                        .attr("y", coords[1]-20)
+                        .attr("width", text.length*7)
+                        .attr("height", 20)
+                        .attr("stroke", "black")
+                        .style("fill", "white"); 
+                    
+                    // Checks if to place the information on the right or on the left of the mouse location
+                    if (d.lap < (x.domain()[0]+x.domain()[1])/2) {
+                        rect.attr("x", coords[0]+1)
+                            .attr("y", coords[1]-20);
+                        g.append('text')
+                            .attr("x", coords[0]+5)
+                            .attr("y", coords[1]-5)
+                            .attr("fill", colors(d.surname))
+                            .text(text);
+                    }
+                    else {
+                        rect.attr("x", coords[0]-100)
+                            .attr("y", coords[1]-20);
+                        g.append('text')
+                            .attr("x", coords[0]-96)
+                            .attr("y", coords[1]-5)
+                            .attr("fill", colors(d.surname))
+                            .text(text);             
+                    }              
+                })
+                .on("mouseout", function(d) {
+                    // Remove the black outline and label
+                    d3.select(this) 
+                        .attr("stroke", "none");
+                    d3.select(".lap_label"+d.surname)
+                        .remove();
                          
-                         // Makes the dot smaller only if the path it belongs to hasn't been clicked
-                        if (!pathsClicked.includes(d.surname)) {
-                            d3.select(this)
-                                .attr("r", 3);
-                        }
-                    })
-                    .transition()
-                        .delay(path_animation_duration)
-                        .duration(dots_animation_duration)
-                        .style("opacity", 1);
+                    // Makes the dot smaller only if the path it belongs to hasn't been clicked
+                    if (!pathsClicked.includes(d.surname)) {
+                        d3.select(this)
+                            .attr("r", 3);
+                    }
+                })
+             
+            // Animate the dots
+            dotsAnimation(dots);
         }
             
         // Draw the zoom brushing chart
@@ -470,7 +494,13 @@
         // DEBUG
         for (i = 0; i < drivers.length; i++) {
             filterChart(drivers[i]);
-        }    
+        }
+        
+        // Adds the option div if not previously added
+        options = document.getElementById("options");
+        if (!document.body.contains(options)) {
+            drawOptions();
+        }
     }
     
     // Adds a brushing graph so that the user can zoom in/out on the timeseries
@@ -595,7 +625,7 @@
         // Initializes the empty svg area
         wrapper = document.getElementById("wrapper");
         svgLegendDiv = document.createElement('div');
-        svgLegendDiv.innerHTML = "Legend";
+        svgLegendDiv.innerHTML = "Legend Table";
         svgLegendDiv.id = "legendtable";
         wrapper.append(svgLegendDiv);
         
@@ -697,13 +727,9 @@
                 .attr("visibility", "visible");
             pathAnimation(path);
                     
-            d3.selectAll(".dot"+d)
-                .attr("visibility", "visible")
-                .style("opacity", 0)
-                .transition()
-                    .delay(path_animation_duration)
-                    .duration(dots_animation_duration)
-                    .style("opacity", 1);
+            dots = d3.selectAll(".dot"+d)
+                .attr("visibility", "visible");
+            dotsAnimation(dots);
                     
             path = d3.select(".brushing_path"+d)
                 .attr("visibility", "visible");
@@ -716,17 +742,74 @@
        }   
     }
     
+    // Draw the options above the graph
+    function drawOptions() {
+        // Creates the 'div' that contains the list of options
+        optionsDiv = document.createElement('div');
+        optionsDiv.id = "options";
+        optionsDiv.offsetHeight = document.getElementById("title").offsetHeight;
+        optionsDiv.innerHTML = "OPTIONS<br>";
+        document.getElementById("abovewrapper").appendChild(optionsDiv);
+        
+        // Add animations options
+        optionsDiv.innerHTML += "Animations: ";
+        animationsEnabledButton = document.createElement('input');
+        animationsEnabledButton.type = 'radio';
+        animationsEnabledButton.name = 'animations';
+        animationsEnabledButton.id = 'enable-animations';
+        animationsEnabledButton.value = "Enabled";
+        label = document.createElement('label');
+        label.innerHTML = "Enabled";
+        optionsDiv.appendChild(animationsEnabledButton);
+        optionsDiv.appendChild(label);
+        optionsDiv.innerHTML += "   ";
+        document.getElementById("enable-animations").checked = true;
+        
+        animationsDisabledButton = document.createElement('input');
+        animationsDisabledButton.type = 'radio';
+        animationsDisabledButton.name = 'animations';
+        animationsDisabledButton.id = 'disable-animations';
+        animationsDisabledButton.value = "Disabled";
+        label = document.createElement('label');
+        label.innerHTML = "Disabled";
+        optionsDiv.appendChild(animationsDisabledButton);
+        optionsDiv.appendChild(label);
+        
+        activateInputEventsOptions();
+    }
+    
+    function activateInputEventsOptions() {
+        document.getElementById("enable-animations").onclick = function() {
+            enableAnimations = true;
+        }
+        document.getElementById("disable-animations").onclick = function() {
+            enableAnimations = false;
+        }
+    }
+    
     // Animates the path upon first visualization
     function pathAnimation(path) {
         if (enableAnimations) {
             pathLength = path.node().getTotalLength();
-                path.attr("stroke-dasharray", pathLength + " " + pathLength)
-                    .attr("stroke-dashoffset", pathLength)
-                    .transition()
-                        .duration(path_animation_duration)
-                        .attr("stroke-dashoffset", 0);
+            path.attr("stroke-dasharray", pathLength + " " + pathLength)
+                .attr("stroke-dashoffset", pathLength)
+                .transition()
+                    .duration(path_animation_duration)
+                    .attr("stroke-dashoffset", 0);
         }
     }
+    
+    // Animates the points upon first visualization
+    function dotsAnimation(dots) {
+        if (enableAnimations) {
+            dots.style("opacity", 0)
+                .transition()
+                    .delay(path_animation_duration)
+                    .duration(dots_animation_duration)
+                    .style("opacity", 1);
+        }
+    }
+            
               
     drawTitle();
     </script>
