@@ -13,6 +13,10 @@
                 display: inline-block;
                 background: yellow;
                 text-align: center;
+                animation-name: fadeInOpacity;
+                animation-iteration-count: 1;
+                animation-timing-function: ease-in;
+                animation-duration: 2s;
             }
             #wrapper {
                 display: flex;
@@ -20,6 +24,10 @@
                 border-top: 1px solid black;
                 border-bottom: none;
                 width: fit-content;
+                animation-name: fadeInOpacity;
+                animation-iteration-count: 1;
+                animation-timing-function: ease-in;
+                animation-duration: 2s;
             }  
             #timeseries {
                 padding-top: 3px;
@@ -34,6 +42,18 @@
                 border: 3px solid black;
                 border-top: none;
                 width: fit-content;
+                animation-name: fadeInOpacity;
+                animation-iteration-count: 1;
+                animation-timing-function: ease-in;
+                animation-duration: 2s;
+            }
+            @keyframes fadeInOpacity {
+                0% {
+                    opacity: 0;
+                }
+                100% {
+                    opacity: 1;
+                }
             }
         </style>
 	</head>
@@ -215,7 +235,7 @@
         
         svgDiv = document.createElement('div');
         svgDiv.id = "timeseries";
-        svgDiv.innerHTML = year + " " + document.getElementById("select-race").options[round].innerHTML;
+        svgDiv.innerHTML = year + " " + document.getElementById("select-race").options[round].innerHTML + " - Race Overview";
         wrapper.append(svgDiv);
         
         svg = d3.select('#timeseries')
@@ -305,26 +325,23 @@
                         return "hidden";
                 })
                 
-            // Handles input events on patch
+            // Handles input events when interacting with a path
             path.on("mouseover", function() {
-                    // Adds driver's name when hovering over a line, while making it bigger
                     coords = d3.mouse(this);
                     surname = d3.select(this).attr("class").slice(4);
-                    d3.select(this).attr("stroke-width", 5);
                     
-                    svg.append('text')
-                        .attr("class", "path_label"+surname)
-                        .attr("fill", colors(surname))
-                        .attr("x", coords[0]+5)
-                        .attr("y", coords[1]-5)
-                        .text(surname); 
-                        
-                    /*g = svg.append("g")
+                    // Makes the line and dots in it bigger
+                    d3.select(this).attr("stroke-width", 5);
+                    d3.selectAll(".dot"+surname)
+                        .attr("r", 5);
+                    
+                    // Adds driver's name near the mouse location
+                    g = svg.append("g") // Each text label will be inside a black outlined rect in g
                         .attr("class", "path_label"+surname);
                     g.append('rect')
-                        .attr("x", coords[0]+5)
+                        .attr("x", coords[0]+1)
                         .attr("y", coords[1]-20)
-                        .attr("width", surname.length*9)
+                        .attr("width", (surname.length*11)+5)
                         .attr("height", 20)
                         .attr("stroke", "black")
                         .style("fill", "white");
@@ -332,16 +349,24 @@
                         .attr("x", coords[0]+5)
                         .attr("y", coords[1]-5)
                         .attr("fill", colors(surname))
-                        .text(surname); */
+                        .text(surname.toUpperCase());
+                    /*svg.append('text')
+                        .attr("class", "path_label"+surname)
+                        .attr("fill", colors(surname))
+                        .attr("x", coords[0]+5)
+                        .attr("y", coords[1]-5)
+                        .text(surname); */           
                 })
                 .on("mouseout", function() {
                     // Removes driver's name after stopping hovering over a line
                     surname = d3.select(this).attr("class").slice(4);
                     d3.select(".path_label"+surname)
                             .remove();
-                    // Makes line small again if not clicked
+                    // Makes line small and dots small again if not in the list of clicked paths
                     if (!pathsClicked.includes(surname)) {
                         d3.select(this).attr("stroke-width", 1);
+                        d3.selectAll(".dot"+surname)
+                            .attr("r", 3);
                     }
                 })
                 .on("click", function() {
@@ -384,9 +409,56 @@
                     .attr("clip-path", "url(#clip)")
                     .style("opacity", 0)
                     .on("mouseover", function(d) {
-                        d3.select(this).attr("r", 5); })
+                        coords = d3.mouse(this);
+                        
+                        // Makes the point bigger and with a black outline
+                        d3.select(this)
+                            .attr("r", 5)
+                            .attr("stroke", "black");
+
+                         // Adds lap's information near the mouse location
+                        g = svg.append("g") // Each text label will be inside a black outlined rect in g
+                            .attr("class", "lap_label"+d.surname);
+                        text = d.surname.substring(0, 3).toUpperCase() + " [L: " + d.lap + ", P: " + d.position + "]";
+                        rect = g.append('rect')
+                            .attr("x", coords[0]+1)
+                            .attr("y", coords[1]-20)
+                            .attr("width", text.length*7)
+                            .attr("height", 20)
+                            .attr("stroke", "black")
+                            .style("fill", "white"); 
+                        if (d.lap < 44) {
+                            rect.attr("x", coords[0]+1)
+                                .attr("y", coords[1]-20);
+                            g.append('text')
+                                .attr("x", coords[0]+5)
+                                .attr("y", coords[1]-5)
+                                .attr("fill", colors(d.surname))
+                                .text(text);
+                        }
+                        else {
+                            rect.attr("x", coords[0]-100)
+                                .attr("y", coords[1]-20);
+                            g.append('text')
+                                .attr("x", coords[0]-96)
+                                .attr("y", coords[1]-5)
+                                .attr("fill", colors(d.surname))
+                                .text(text);             
+                        }              
+                    })
                     .on("mouseout", function(d) {
-                        d3.select(this).attr("r", 3); })
+                        // Remove the black outline and label
+                        d3.select(this) 
+                            .attr("stroke", "none");
+                        d3.select(".lap_label"+d.surname)
+                            .remove();
+                         
+                         // Makes the dot smaller only if the path it belongs to hasn't been clicked
+                        if (!pathsClicked.includes(d.surname)) {
+                            d3.select(this)
+                                .attr("r", 3);
+                        }
+                    })
                     .transition()
                         .delay(path_animation_duration)
                         .duration(dots_animation_duration)
@@ -418,7 +490,7 @@
                 .attr("height", brushing_container_height)
                 //.style("background-color", "red")
             .append("g")
-                .attr("transform", "translate(" + margins.left + "," + margins.top + ")")
+                .attr("transform", "translate(" + margins.left + "," + margins.top/4 + ")")
                 .attr("id","brushing");
                 
         // Initializes the scales and colors
