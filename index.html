@@ -30,12 +30,14 @@
                 animation-duration: 2s;
             }  
             #timeseries {
-                padding-top: 3px;
+                padding-top: 6px;
                 display: inline-block;
                 text-align: center;
             }
             #legendtable {
+                padding-top: 6px;
                 display: inline-block;
+                text-align: center;
             }
             #brushing {
                 display: flex;
@@ -76,7 +78,7 @@
     
     var invisibleAtStart = false; // DEBUG
     
-    var enableAnimations = true;
+    var enableAnimations = true; // DEBUG
     var path_animation_duration = 5000;
     var dots_animation_duration = 2000;
     
@@ -349,13 +351,7 @@
                         .attr("x", coords[0]+5)
                         .attr("y", coords[1]-5)
                         .attr("fill", colors(surname))
-                        .text(surname.toUpperCase());
-                    /*svg.append('text')
-                        .attr("class", "path_label"+surname)
-                        .attr("fill", colors(surname))
-                        .attr("x", coords[0]+5)
-                        .attr("y", coords[1]-5)
-                        .text(surname); */           
+                        .text(surname.toUpperCase());       
                 })
                 .on("mouseout", function() {
                     // Removes driver's name after stopping hovering over a line
@@ -427,7 +423,7 @@
                             .attr("height", 20)
                             .attr("stroke", "black")
                             .style("fill", "white"); 
-                        if (d.lap < 44) {
+                        if (d.lap < (x.domain()[0]+x.domain()[1])/2) {
                             rect.attr("x", coords[0]+1)
                                 .attr("y", coords[1]-20);
                             g.append('text')
@@ -474,7 +470,7 @@
         // DEBUG
         for (i = 0; i < drivers.length; i++) {
             filterChart(drivers[i]);
-        }      
+        }    
     }
     
     // Adds a brushing graph so that the user can zoom in/out on the timeseries
@@ -599,6 +595,7 @@
         // Initializes the empty svg area
         wrapper = document.getElementById("wrapper");
         svgLegendDiv = document.createElement('div');
+        svgLegendDiv.innerHTML = "Legend";
         svgLegendDiv.id = "legendtable";
         wrapper.append(svgLegendDiv);
         
@@ -608,10 +605,10 @@
             .attr("height", container_dimensions.height)
             //.style("background-color", "red")
             .append("g")
-            .attr("transform", "translate(" + 0 + "," + margins.top + ")")
+            .attr("transform", "translate(" + 0 + "," + margins.top/4 + ")")
             .attr("id","legendtable");
           
-        // Draws the small colored rectangles
+        // Prepares the space/layout for the legend
         sizeSquare = 10;
         legend = svgLegend.selectAll("legend")
             .data(drivers)
@@ -621,6 +618,8 @@
 			.attr("transform", function(d,i){
                 return "translate(0,"+(i*sizeSquare+i*6)+")";
             });
+         
+        // Draws the small colored rectangles
         legend.append("rect")
 			.attr("width", sizeSquare)
 			.attr("height", sizeSquare)
@@ -629,22 +628,7 @@
             })
 			.style("fill", function(d){
                 return colors(d);
-			})
-            .on("mouseover", function(d) {
-                d3.select(this)
-                    .attr("stroke", "black");
-                d3.select(".text"+d)
-                    .attr("text-decoration", "underline overline");
-            })
-            .on("mouseout", function(d) {
-                d3.select(this)
-                    .attr("stroke", "none");
-                d3.select(".text"+d)
-                    .attr("text-decoration", "none");
-            })
-            .on("click", function(d) { // User disables/enables data of a pilot in the graph
-                filterChart(d);
-            });
+			});
             
         // Writes the text near the small colored rectangles
         legend.append("text")
@@ -656,23 +640,37 @@
             .attr("dy", ".35em")
             .text(function(d) {
                 return d;
-            })
+            });
+        
+        // Add input events to the legend
+        legend
             .on("mouseover", function(d) {
+                // Highlights the entry in the legend and makes path and dots bigger
                 d3.select(".rect"+d)
                     .attr("stroke", "black");
-                d3.select(this)
+                d3.select(".text"+d)
                     .attr("text-decoration", "underline overline");
+                d3.select(".path"+d)
+                    .attr("stroke-width", 5);
+                d3.selectAll(".dot"+d)
+                    .attr("r", 5); 
             })
             .on("mouseout", function(d) {
+                // Restore entry in the legend, path and dots
                 d3.select(".rect"+d)
                     .attr("stroke", "none");
-                d3.select(this)
+                d3.select(".text"+d)
                     .attr("text-decoration", "none");
+                if (!pathsClicked.includes(d)) { // Restore path and dots only if the path is not clicked list
+                    d3.select(".path"+d)
+                        .attr("stroke-width", 1);
+                    d3.selectAll(".dot"+d)
+                        .attr("r", 3);
+                }      
             })
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
                 filterChart(d);
-            });
-        
+            });      
     }
     
     // Filters data on the chart thanks to user's input in the legend
