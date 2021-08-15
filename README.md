@@ -1,1 +1,1 @@
-# Formula-1-Visual-Analytics-Project
+# Formula-1-Race-Visualizer
