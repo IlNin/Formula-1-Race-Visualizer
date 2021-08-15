@@ -4,83 +4,12 @@
         <meta http-equiv="content-type" content="text/html;charset=utf-8">
         <title>Formula 1 VA Project</title>
         <script type="text/javascript" src="d3.js" charset="utf-8"></script>
-        <style>
-            #abovewrapper {
-                width: fit-content;
-                display: flex;
-            }
-            #title {
-                border: 3px solid black;
-                padding-left: 5px;
-                padding-right: 5px;
-                padding-bottom: 5px;
-                display: inline-block;
-                background: yellow;
-                text-align: center;
-                animation-name: fadeInOpacity;
-                animation-iteration-count: 1;
-                animation-timing-function: ease-in;
-                animation-duration: 2s;
-            }
-            #options {
-                border: 3px solid black;
-                border-left: none;
-                text-align: center;
-                padding-top: 5px;
-                padding-left: 5px;
-                padding-right: 5px;
-                display: inline-block;
-                background: yellow;
-                animation-name: fadeInOpacity;
-                animation-iteration-count: 1;
-                animation-timing-function: ease-in;
-                animation-duration: 2s;
-            } 
-            #wrapper {
-                display: flex;
-                border: 3px solid black;
-                border-top: 1px solid black;
-                border-bottom: none;
-                width: fit-content;
-                animation-name: fadeInOpacity;
-                animation-iteration-count: 1;
-                animation-timing-function: ease-in;
-                animation-duration: 2s;
-            }  
-            #timeseries {
-                padding-top: 6px;
-                display: inline-block;
-                text-align: center;
-            }
-            #legendtable {
-                padding-top: 6px;
-                display: inline-block;
-                text-align: center;
-            }
-            #brushing {
-                display: flex;
-                border: 3px solid black;
-                border-top: none;
-                width: fit-content;
-                animation-name: fadeInOpacity;
-                animation-iteration-count: 1;
-                animation-timing-function: ease-in;
-                animation-duration: 2s;
-            }
-            @keyframes fadeInOpacity {
-                0% {
-                    opacity: 0;
-                }
-                100% {
-                    opacity: 1;
-                }
-            }
-        </style>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
 	</head>
     
     <body>
     <script charset="utf-8"> 
-    // Global variables
+    // Sizes
     var container_dimensions = {width: 1200, height: 400}; // width: 650
     var margins = {top: 20, right: 20, bottom: 40, left: 40};
     var chart_dimensions = {
@@ -91,58 +20,146 @@
     var brushing_container_height = 100;
     var brushing_height = brushing_container_height - margins.top - margins.bottom;
     
+    // Elements
+    var aboveWrapper;
     var x, y, xAxis, yAxis, svg, line;
     var drivers, colors, lineData;
     
+    // Options
     var invisibleAtStart = false;
-    
     var enableAnimations = true;
+    
+    // Animations
     var path_animation_duration = 5000;
     var dots_animation_duration = 2000;
     
-    var pathsClicked = [];
-    
     // Draw the title above the charts
     function drawTitle() {
-        // Creates the wrapper div that contains the div 'title'
-        aboveWrapper = document.createElement('div');
+        // Creates the wrapper div that contains the div 'title', 'menu'
+        var aboveWrapper = document.createElement('div');
         aboveWrapper.id = "abovewrapper";
         document.body.appendChild(aboveWrapper);
         
-        // Creates the div 'title' which contains text, selections and buttons
-        title = document.createElement('div');
+        // Creates the div 'title' which contains the logo
+        var title = document.createElement('div');
         title.id = "title";
-        title.innerHTML = "<h1>Formula 1 Visual Analytics Project</h1>";
-        title.innerHTML += "Please select a race: ";
-        aboveWrapper.appendChild(title);
+        var image = document.createElement("img");
+        image.setAttribute("src", "Logo.png");
+        image.setAttribute("height", "76px");
+        image.setAttribute("width", "445px");
+        title.appendChild(image);
+        aboveWrapper.appendChild(title);   
+        
+        // Creates the div 'menu' which allows the user to select a race
+        var menu = document.createElement('div');
+        menu.id = "menu";
+        aboveWrapper.appendChild(menu);
+        var label = document.createElement('label');
+        label.innerHTML = "Please select a race!";
+        menu.append(label);
     
-        // Creates a selection for the seasons with a default option, and adds it to 'title'
-        selectSeason = document.createElement('select');
+        // Creates a selection for the seasons with a default option, and adds it to 'menu'
+        var upperMenu = document.createElement('div');
+        upperMenu.style.paddingTop = "5px";
+        menu.append(upperMenu);
+        upperMenu.innerHTML = "Season: ";
+        var selectSeason = document.createElement('select');
         selectSeason.id = "select-season";
-        defaultSeasonOption = document.createElement('option');
+        var defaultSeasonOption = document.createElement('option');
         defaultSeasonOption.value = 0;
         defaultSeasonOption.innerHTML = "- SEASON -";
         selectSeason.appendChild(defaultSeasonOption);
-        title.appendChild(selectSeason);
-        title.innerHTML += "&nbsp";
+        upperMenu.appendChild(selectSeason);
+        upperMenu.innerHTML += "&nbsp&nbsp&nbsp&nbsp&nbsp";
     
-        // Creates a selection for the races with a default option, and adds it to 'title'
-        selectRace = document.createElement('select');
+        // Creates a selection for the races with a default option, and adds it to 'menu'
+        upperMenu.innerHTML += "Race: ";
+        var selectRace = document.createElement('select');
         selectRace.id = "select-race";
         selectRace.style.width = '150px';
-        defaultRaceOption = document.createElement('option');
+        var defaultRaceOption = document.createElement('option');
         defaultRaceOption.value = 0;
         defaultRaceOption.innerHTML = "- RACE -";
         selectRace.appendChild(defaultRaceOption);
-        title.appendChild(selectRace);
-        title.innerHTML += "&nbsp";
+        upperMenu.appendChild(selectRace);
     
-        // Creates the search button, makes it disabled and adds it to 'title'
-        search = document.createElement('button');
+        // Creates the search button, makes it disabled and adds it to 'menu'
+        var bottomMenu = document.createElement('div');
+        bottomMenu.style.paddingTop = "5px";
+        menu.appendChild(bottomMenu);
+        var search = document.createElement('button');
         search.id = "search";
         search.innerHTML = "Search data!";
         search.disabled = true;
-        title.appendChild(search);
+        bottomMenu.appendChild(search);
+        
+        // Creates the options section
+        var options = document.createElement('div');
+        options.id = "options";
+        aboveWrapper.appendChild(options);
+        
+        // Add animations options
+        options.innerHTML += "- Animations -<br>";
+        var animationsEnabledButton = document.createElement('input');
+        animationsEnabledButton.type = 'radio';
+        animationsEnabledButton.name = 'animations';
+        animationsEnabledButton.id = 'enable-animations';
+        animationsEnabledButton.value = "Enabled";
+        label = document.createElement('label');
+        label.innerHTML = "Enabled";
+        options.appendChild(animationsEnabledButton);
+        options.appendChild(label);
+        options.innerHTML += "   ";
+        
+        var animationsDisabledButton = document.createElement('input');
+        animationsDisabledButton.type = 'radio';
+        animationsDisabledButton.name = 'animations';
+        animationsDisabledButton.id = 'disable-animations';
+        animationsDisabledButton.value = "Disabled";
+        label = document.createElement('label');
+        label.innerHTML = "Disabled";
+        options.appendChild(animationsDisabledButton);
+        options.appendChild(label);
+        options.innerHTML += "<br>";
+        
+        // Asks if all drivers' data is shown when first loading the chart
+        options.innerHTML += "- Show All Upon First Loading -<br>";
+        var showAllEnabledButton = document.createElement('input');
+        showAllEnabledButton.type = 'radio';
+        showAllEnabledButton.name = 'showall';
+        showAllEnabledButton.id = 'enable-showall';
+        showAllEnabledButton.value = "Enabled";
+        label = document.createElement('label');
+        label.innerHTML = "Enabled";
+        options.appendChild(showAllEnabledButton);
+        options.appendChild(label);
+        options.innerHTML += "   ";
+        
+        var showAllDisabledButton = document.createElement('input');
+        showAllDisabledButton.type = 'radio';
+        showAllDisabledButton.name = 'showall';
+        showAllDisabledButton.id = 'disable-showall';
+        showAllDisabledButton.value = "Disabled";
+        label = document.createElement('label');
+        label.innerHTML = "Disabled";
+        options.appendChild(showAllDisabledButton);
+        options.appendChild(label);   
+        
+        document.getElementById("enable-animations").checked = true; 
+        document.getElementById("enable-showall").checked = true;
+        
+        document.getElementById("enable-animations").onclick = function() {
+            enableAnimations = true;
+        }
+        document.getElementById("disable-animations").onclick = function() {
+            enableAnimations = false;
+        }
+         document.getElementById("enable-showall").onclick = function() {
+            invisibleAtStart = false;
+        }
+        document.getElementById("disable-showall").onclick = function() {
+            invisibleAtStart = true;
+        }
         
         // Loads the data from the csv file
         loadData();
@@ -150,7 +167,7 @@
     
     // Loads the data from the csv file
     function loadData() {
-        d3.csv("lapsLight.csv", function(error, data) {
+        d3.csv("laps.csv", function(error, data) {
             // Prints the error in case something goes wrong
             if (error) {
                 console.log(error);
@@ -159,11 +176,8 @@
             else {
                 seasons = []; // Contains all distinct seasons inside the csv file
                 data.forEach(function(d) { // Cycles through the data
-                    // console.log(d);
                     d.surname = d.surname.replace(/[\s.']/g, '_'); // Removes eventual spaces in the surnames
-                    if (d.surname == "Schumacher") { // Separetes Ralph and Michael Schumacher
-                        d.surname = d.surname + "_" + d.forename[0];
-                    }
+                    d.forename = d.forename.replace(/[\s.']/g, '_'); // Same, but for the names
                     if (!seasons.includes(d.year)) { // Check if the season is new
                         seasons.push(d.year); // Adds the season to the list
                         newSeasonOption = document.createElement('option'); // Makes the new season a selectable option 
@@ -231,7 +245,7 @@
     // Draws the graph that contains the timeseries lap/position
     function plotTimeSeriesGraph(data, year, round) {
         // Removes the previous graph and option screen
-        previousGraph = document.getElementById("wrapper");
+        var previousGraph = document.getElementById("wrapper");
         if (document.body.contains(previousGraph)) {
             previousGraph.remove();
             document.getElementById("brushing").remove();
@@ -244,12 +258,13 @@
         data.forEach(function(d) {
             if (d.year == year && d.round == round) {
                 relevantData.push(d);
-                if (!drivers.includes(d.surname)) {
-                    driverData = [];
-                    drivers.push(d.surname);
-                    lineData.set(d.surname, driverData);
+                var driver = d.surname + "_" + d.forename;
+                if (!drivers.includes(driver)) {
+                    var driverData = [];
+                    drivers.push(driver);
+                    lineData.set(driver, driverData);
                 }
-                lineData.get(d.surname).push(d);
+                lineData.get(driver).push(d);
             }
         });
         
@@ -260,7 +275,7 @@
         
         svgDiv = document.createElement('div');
         svgDiv.id = "timeseries";
-        svgDiv.innerHTML = year + " " + document.getElementById("select-race").options[round].innerHTML + " - Race Overview";
+        svgDiv.innerHTML = "<b>" + year + " " + document.getElementById("select-race").options[round].innerHTML + " - Race Overview</b>";
         wrapper.append(svgDiv);
         
         svg = d3.select('#timeseries')
@@ -296,8 +311,8 @@
         colors = d3.scaleOrdinal(d3.schemeCategory20);
             
         // Initializes the axis
-        xAxis= d3.axisBottom(x).ticks().tickFormat(d3.format("d"));
-        yAxis= d3.axisLeft(y).ticks(20).tickFormat(d3.format("d"));
+        xAxis = d3.axisBottom(x).ticks().tickFormat(d3.format("d"));
+        yAxis = d3.axisLeft(y).ticks(20).tickFormat(d3.format("d"));
         
         // Appends the x axis
         svg.append("g")
@@ -335,9 +350,9 @@
          
         // Draws the paths on the graph
         for (i = 0; i < drivers.length; i++) {
-            color = colors(drivers[i]);
-            path = svg.append('path')
-                .attr("class", "path"+drivers[i])
+            var color = colors(drivers[i]);
+            var path = svg.append('path')
+                .attr("class", "path" + drivers[i])
                 .attr('d', line(lineData.get(drivers[i])))
                 .attr("fill", "none")
                 .attr("stroke-width", 1)
@@ -347,54 +362,42 @@
                 
             // Handles input events when interacting with a path
             path.on("mouseover", function() {
-                    coords = d3.mouse(this);
-                    surname = d3.select(this).attr("class").slice(4);
+                    var coords = d3.mouse(this);
+                    var driver = d3.select(this).attr("class").slice(4);
                     
                     // Makes the line and dots in it bigger
                     d3.select(this).attr("stroke-width", 5);
-                    d3.selectAll(".dot"+surname)
+                    d3.selectAll(".dot" + driver)
                         .attr("r", 5);
                     
                     // Adds driver's name near the mouse location
-                    g = svg.append("g") // Each text label will be inside a black outlined rect in g
-                        .attr("class", "path_label"+surname);
+                    var g = svg.append("g") // Each text label will be inside a black outlined rect in g
+                        .attr("class", "path_label" + driver);
                     g.append('rect')
                         .attr("x", coords[0]+1)
                         .attr("y", coords[1]-20)
-                        .attr("width", (surname.length*11)+5)
+                        .attr("width", (driver.length*11)+5)
                         .attr("height", 20)
                         .attr("stroke", "black")
                         .style("fill", "white");
                     g.append('text')
                         .attr("x", coords[0]+5)
                         .attr("y", coords[1]-5)
-                        .attr("fill", colors(surname))
-                        .text(surname.toUpperCase());       
+                        .attr("fill", colors(driver))
+                        .text(driver.toUpperCase().replace(/_/g, ' '));       
                 })
                 .on("mouseout", function() {
                     // Removes driver's name after stopping hovering over a line
-                    surname = d3.select(this).attr("class").slice(4);
-                    d3.select(".path_label"+surname)
+                    var driver = d3.select(this).attr("class").slice(4);
+                    d3.select(".path_label" + driver)
                             .remove();
-                    // Makes line small and dots small again if not in the list of clicked paths
-                    if (!pathsClicked.includes(surname)) {
-                        d3.select(this).attr("stroke-width", 1);
-                        d3.selectAll(".dot"+surname)
-                            .attr("r", 3);
-                    }
+                    // Makes line small and dots small again
+                    d3.select(this).attr("stroke-width", 1);
+                    d3.selectAll(".dot" + driver)
+                        .attr("r", 3);
                 })
                 .on("click", function() {
-                    surname = d3.select(this).attr("class").slice(4);
-                    // Adds the clicked path to the list of clicked path
-                    if (!pathsClicked.includes(surname)) {
-                        pathsClicked.push(surname);
-                    }
-                    // The path was already clicked before: it is removed from the list
-                    else {
-                        index = pathsClicked.indexOf(surname);
-                        pathsClicked.splice(index, 1);
-                        d3.select(this).attr("stroke-width", 1);
-                    }
+                    // Do nothing
                 });
                              
             // Creates path animation
@@ -403,13 +406,11 @@
         
         // Populates the chart with the dots
         for (i = 0; i < drivers.length; i++) {
-            dots = svg.selectAll(".dot"+drivers[i])
+            var dots = svg.selectAll(".dot" + drivers[i])
                 .data(lineData.get(drivers[i]))
                 .enter()
                 .append("circle")
-                    .attr("class", function(d) {
-                        return "dot"+d.surname; 
-                    })
+                    .attr("class", "dot" + drivers[i])
                     .attr("r", 3)
                     .attr("cx", function(d) { 
                         return x(d.lap);
@@ -418,13 +419,14 @@
                         return y(d.position);
                     })
                     .style("fill", function(d) {
-                        return colors(d.surname); 
+                        return colors(drivers[i]); 
                     })
                     .attr("clip-path", "url(#clip)");
             
             // Handles the input events when interacting with a point            
             dots.on("mouseover", function(d) {
-                    coords = d3.mouse(this);
+                    var coords = d3.mouse(this);
+                    var driver = d3.select(this).attr("class").slice(3);
                         
                     // Makes the point bigger and with a black outline
                     d3.select(this)
@@ -432,13 +434,13 @@
                         .attr("stroke", "black");
 
                     // Adds lap's information near the mouse location
-                    g = svg.append("g") // Each text label will be inside a black outlined rect in g
-                            .attr("class", "lap_label"+d.surname);
-                    text = d.surname.substring(0, 3).toUpperCase() + " [L: " + d.lap + ", P: " + d.position + "]";
-                    rect = g.append('rect')
+                    var g = svg.append("g") // Each text label will be inside a black outlined rect in g
+                            .attr("class", "lap_label" + driver);
+                    var text = driver.substring(0, 3).toUpperCase() + " [L: " + d.lap + ", P: " + d.position + "]";
+                    var rect = g.append('rect')
                         .attr("x", coords[0]+1)
                         .attr("y", coords[1]-20)
-                        .attr("width", text.length*7)
+                        .attr("width", text.length*8)
                         .attr("height", 20)
                         .attr("stroke", "black")
                         .style("fill", "white"); 
@@ -450,7 +452,7 @@
                         g.append('text')
                             .attr("x", coords[0]+5)
                             .attr("y", coords[1]-5)
-                            .attr("fill", colors(d.surname))
+                            .attr("fill", colors(driver))
                             .text(text);
                     }
                     else {
@@ -459,23 +461,20 @@
                         g.append('text')
                             .attr("x", coords[0]-96)
                             .attr("y", coords[1]-5)
-                            .attr("fill", colors(d.surname))
+                            .attr("fill", colors(driver))
                             .text(text);             
                     }              
                 })
                 .on("mouseout", function(d) {
-                    // Remove the black outline and label
+                    var driver = d3.select(this).attr("class").slice(3);
+                    
+                    // Remove the black outline and label, and makes point smaller
                     d3.select(this) 
-                        .attr("stroke", "none");
-                    d3.select(".lap_label"+d.surname)
+                        .attr("stroke", "none")
+                        .attr("r", 3);
+                    d3.select(".lap_label" + driver)
                         .remove();
-                         
-                    // Makes the dot smaller only if the path it belongs to hasn't been clicked
-                    if (!pathsClicked.includes(d.surname)) {
-                        d3.select(this)
-                            .attr("r", 3);
-                    }
-                })
+                });
              
             // Animate the dots
             dotsAnimation(dots);
@@ -492,12 +491,6 @@
             for (i = 0; i < drivers.length; i++) {
                 filterChart(drivers[i]);
             }
-        }
-        
-        // Adds the option div if not previously added
-        options = document.getElementById("options");
-        if (!document.body.contains(options)) {
-            drawOptions();
         }
     }
     
@@ -629,12 +622,17 @@
         
         svgLegend = d3.select('#legendtable')
             .append('svg')
-            .attr("width", legend_width)
-            .attr("height", container_dimensions.height)
-            //.style("background-color", "red")
-            .append("g")
-            .attr("transform", "translate(" + 0 + "," + margins.top/4 + ")")
-            .attr("id","legendtable");
+                .attr("width", legend_width)
+                .attr("height", container_dimensions.height)
+                //.style("background-color", "red")
+                .append("g")
+                    .attr("transform", "translate(" + 0 + "," + margins.top/4 + ")")
+                    .attr("id","legendtable");
+        
+        svgLegend.append("text")
+            .style("font", "12px times")
+            .attr("y", 5)
+            .text("Click to filter data!");
           
         // Prepares the space/layout for the legend
         sizeSquare = 10;
@@ -644,7 +642,7 @@
             .append("g")
             .attr("class", "legend")
 			.attr("transform", function(d,i){
-                return "translate(0,"+(i*sizeSquare+i*6)+")";
+                return "translate(0,"+((i+1)*sizeSquare+i*5)+")";
             });
          
         // Draws the small colored rectangles
@@ -666,13 +664,15 @@
             .attr("x", sizeSquare+5)
             .attr("y", sizeSquare/2)
             .attr("dy", ".35em")
+            .style("font", "12px times")
             .text(function(d) {
-                return d;
+                return d.replace(/_/g, ' ');
             });
         
         // Add input events to the legend
         legend
             .on("mouseover", function(d) {
+                document.body.style.cursor = "pointer";
                 // Highlights the entry in the legend and makes path and dots bigger
                 d3.select(".rect"+d)
                     .attr("stroke", "black");
@@ -684,17 +684,16 @@
                     .attr("r", 5); 
             })
             .on("mouseout", function(d) {
+                document.body.style.cursor = "default";
                 // Restore entry in the legend, path and dots
                 d3.select(".rect"+d)
                     .attr("stroke", "none");
                 d3.select(".text"+d)
                     .attr("text-decoration", "none");
-                if (!pathsClicked.includes(d)) { // Restore path and dots only if the path is not clicked list
-                    d3.select(".path"+d)
-                        .attr("stroke-width", 1);
-                    d3.selectAll(".dot"+d)
-                        .attr("r", 3);
-                }      
+                d3.select(".path"+d)
+                    .attr("stroke-width", 1);
+                d3.selectAll(".dot"+d)
+                    .attr("r", 3);
             })
             .on("click", function(d) { // User disables/enables data of a pilot in the graph
                 filterChart(d);
@@ -703,15 +702,14 @@
     
     // Filters data on the chart thanks to user's input in the legend
     function filterChart(d) {
-                    console.log("Sono qui!");
         // Filters paths and dots of a driver
         if (d3.select(".path"+d).attr("visibility") == "visible") {
-            d3.selectAll(".dot"+d)
-                .attr("visibility", "hidden")
-                .interrupt(); // Interrupt animation if there is one ongoing
             d3.select(".path"+d)
                 .attr("visibility", "hidden")
-                .interrupt();
+                .interrupt(); // Interrupt animation if there is one ongoing    
+            d3.selectAll(".dot"+d)
+                .attr("visibility", "hidden")
+                .interrupt();     
             d3.select(".brushing_path"+d)
                 .attr("visibility", "hidden")
                 .interrupt();
@@ -739,83 +737,6 @@
             d3.select(".rect"+d)
                 .style("fill", colors(d));
        }   
-    }
-    
-    // Draw the options above the graph
-    function drawOptions() {
-        // Creates the 'div' that contains the list of options
-        optionsDiv = document.createElement('div');
-        optionsDiv.id = "options";
-        optionsDiv.offsetHeight = document.getElementById("title").offsetHeight;
-        optionsDiv.innerHTML = "<b>OPTIONS</b><br>";
-        document.getElementById("abovewrapper").appendChild(optionsDiv);
-        
-        // Add animations options
-        optionsDiv.innerHTML += "- Animations -<br>";
-        animationsEnabledButton = document.createElement('input');
-        animationsEnabledButton.type = 'radio';
-        animationsEnabledButton.name = 'animations';
-        animationsEnabledButton.id = 'enable-animations';
-        animationsEnabledButton.value = "Enabled";
-        label = document.createElement('label');
-        label.innerHTML = "Enabled";
-        optionsDiv.appendChild(animationsEnabledButton);
-        optionsDiv.appendChild(label);
-        optionsDiv.innerHTML += "   ";
-        
-        animationsDisabledButton = document.createElement('input');
-        animationsDisabledButton.type = 'radio';
-        animationsDisabledButton.name = 'animations';
-        animationsDisabledButton.id = 'disable-animations';
-        animationsDisabledButton.value = "Disabled";
-        label = document.createElement('label');
-        label.innerHTML = "Disabled";
-        optionsDiv.appendChild(animationsDisabledButton);
-        optionsDiv.appendChild(label);
-        optionsDiv.innerHTML += "<br>";
-        
-        // Asks if all drivers' data is shown when first loading the chart
-        optionsDiv.innerHTML += "- Show All Upon First Loading -<br>";
-        showAllEnabledButton = document.createElement('input');
-        showAllEnabledButton.type = 'radio';
-        showAllEnabledButton.name = 'showall';
-        showAllEnabledButton.id = 'enable-showall';
-        showAllEnabledButton.value = "Enabled";
-        label = document.createElement('label');
-        label.innerHTML = "Enabled";
-        optionsDiv.appendChild(showAllEnabledButton);
-        optionsDiv.appendChild(label);
-        optionsDiv.innerHTML += "   ";
-        
-        showAllDisabledButton = document.createElement('input');
-        showAllDisabledButton.type = 'radio';
-        showAllDisabledButton.name = 'showall';
-        showAllDisabledButton.id = 'disable-showall';
-        showAllDisabledButton.value = "Disabled";
-        label = document.createElement('label');
-        label.innerHTML = "Disabled";
-        optionsDiv.appendChild(showAllDisabledButton);
-        optionsDiv.appendChild(label);   
-        
-        document.getElementById("enable-animations").checked = true; 
-        document.getElementById("enable-showall").checked = true;
-        activateInputEventsOptions();
-    }
-    
-    // Adds events to the list of options
-    function activateInputEventsOptions() {
-        document.getElementById("enable-animations").onclick = function() {
-            enableAnimations = true;
-        }
-        document.getElementById("disable-animations").onclick = function() {
-            enableAnimations = false;
-        }
-         document.getElementById("enable-showall").onclick = function() {
-            invisibleAtStart = false;
-        }
-        document.getElementById("disable-showall").onclick = function() {
-            invisibleAtStart = true;
-        }
     }
     
     // Animates the path upon first visualization

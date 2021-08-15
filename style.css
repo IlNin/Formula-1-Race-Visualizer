@@ -1,0 +1,82 @@
+#abovewrapper {
+    width: fit-content;
+    display: flex;
+    animation-name: fadeInOpacity;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in;
+    animation-duration: 1s;
+}
+#title {
+   border: 2px solid black;
+    width: 445px;
+    height: 76px;
+    display: inline-block;
+    background: yellow;
+    text-align: center;
+}
+#menu {
+    border: 2px solid black;
+    font-size: 14px;
+    width: 435px;
+    height: 70px;
+    border-left: none;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-bottom: 1px;
+    padding-top: 5px;
+    display: inline-block;
+    background: yellow;
+    text-align: center;
+}
+#options {
+    border: 2px solid black;
+    width: 426px;
+    height: 74px;
+    font-size: 13px;
+    border-left: none;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 2px;
+    display: inline-block;
+    background: yellow;
+    text-align: center;
+}
+#wrapper {
+    display: flex;
+    border: 2px solid black;
+    border-top: none;
+    border-bottom: none;
+    width: fit-content;
+    animation-name: fadeInOpacity;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in;
+    animation-duration: 2s;
+}  
+#timeseries {
+    padding-top: 6px;
+    display: inline-block;
+    text-align: center;
+}
+#legendtable {
+    padding-top: 6px;
+    display: inline-block;
+    text-align: center;
+}
+#brushing {
+    display: flex;
+    border: 2px solid black;
+    border-top: none;
+    width: fit-content;
+    animation-name: fadeInOpacity;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-in;
+    animation-duration: 2s;
+}
+@keyframes fadeInOpacity {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
